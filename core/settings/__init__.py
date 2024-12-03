@@ -1,0 +1,1 @@
+from .development import *  # Change to 'production' in production environment
