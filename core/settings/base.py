@@ -23,10 +23,16 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    # Third-party apps
+    # Authentication
+    'rest_framework',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
     
 
     # Local apps
+    'accounts',
+    'main',
     
 ]
 
@@ -39,6 +45,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "allauth.account.middleware.AccountMiddleware", #allauth
 ]
 
 # Root URL
