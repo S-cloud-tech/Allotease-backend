@@ -1,11 +1,40 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
-from .models import Ticket, EventTicket, AccommodationTicket, ParkingTicket
-from .serializers import TicketSerializer, EventTicketSerializer, AccommodationTicketSerializer, ParkingTicketSerializer, BulkTicketSerializer
+from rest_framework.decorators import action
+from .models import Ticket, EventTicket, AccommodationTicket, ParkingTicket, Reservation, Tag
+from .serializers import (TicketSerializer, EventTicketSerializer, 
+                          AccommodationTicketSerializer, ParkingTicketSerializer, 
+                          BulkTicketSerializer, ReservationSerializer,
+                          TagSerializer)
 
 class TicketViewSet(viewsets.ModelViewSet):
     queryset = Ticket.objects.all()
     serializer_class = TicketSerializer
+
+class ReservationViewSet(viewsets.ModelViewSet):
+    queryset = Reservation.objects.all()
+    serializer_class = ReservationSerializer
+
+    @action(detail=True, methods=['post'])
+    def reserve(self, request, pk=None):
+        ticket = Ticket.objects.get(pk=pk)
+        user = request.user
+
+        if Reservation.objects.filter(ticket=ticket, user=user).exists():
+            return Response({"error": "You have already reserved this ticket."}, status=status.HTTP_400_BAD_REQUEST)
+
+        reservation = Reservation.objects.create(ticket=ticket, user=user)
+        return Response(ReservationSerializer(reservation).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'])
+    def purchase(self, request, pk=None):
+        ticket = Ticket.objects.get(pk=pk)
+        user = request.user
+
+        reservation, created = Reservation.objects.get_or_create(ticket=ticket, user=user)
+        reservation.is_paid = True
+        reservation.save()
+        return Response(ReservationSerializer(reservation).data, status=status.HTTP_200_OK)
 
 class EventTicketViewSet(viewsets.ModelViewSet):
     queryset = EventTicket.objects.all()
@@ -48,3 +77,8 @@ class BulkTicketCreateView(viewsets.ViewSet):
             tickets = serializer.save()
             return Response({"tickets": TicketSerializer(tickets, many=True).data}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TagViewSet(viewsets.ModelViewSet):
+    queryset = Tag.objects.all()
+    serializer_class = TagSerializer

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Ticket, EventTicket, AccommodationTicket, ParkingTicket
+from .models import Ticket, EventTicket, AccommodationTicket, ParkingTicket, Reservation, Tag
 
 class TicketSerializer(serializers.ModelSerializer):
     display_price = serializers.SerializerMethodField()
@@ -12,6 +12,11 @@ class TicketSerializer(serializers.ModelSerializer):
 
 class EventTicketSerializer(serializers.ModelSerializer):
     display_price = serializers.SerializerMethodField()
+    tags = serializers.SlugRelatedField(
+        many=True,
+        queryset=Tag.objects.all(),
+        slug_field='name'
+    )
     class Meta:
         model = EventTicket
         fields = '__all__'
@@ -22,6 +27,8 @@ class EventTicketSerializer(serializers.ModelSerializer):
     def validate(self, data):
         if data.get('is_online') and not data.get('online_link'):
             raise serializers.ValidationError("Online events must have an online link.")
+        if data.get('location') and not data.get('location_address'):
+             raise serializers.ValidationError("Live event must have a location")
         if data.get('agenda') and not isinstance(data['agenda'], list):
             raise serializers.ValidationError("Agenda must be a list of dictionaries with agenda details and times.")
         return data
@@ -59,3 +66,13 @@ class BulkTicketSerializer(serializers.Serializer):
             ticket = Ticket.objects.create(**ticket_data)
             created_tickets.append(ticket)
         return created_tickets
+
+class ReservationSerializer(serializers.Serializer):
+     class Meta:
+          model = Reservation
+          fields = '__all__'
+
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = '__all__'

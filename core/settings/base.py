@@ -29,16 +29,20 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     
-
     # Local apps
     'accounts',
     'main',
+
+    # External apps
+    'location_field.apps.DefaultConfig',
+    'drf_yasg',
     
 ]
 
 # Middleware
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -55,7 +59,8 @@ ROOT_URLCONF = 'core.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],  # Global templates
+        'DIRS': [],  # Global templates
+        # 'DIRS': [BASE_DIR / 'templates'],  # Global templates
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -96,10 +101,17 @@ USE_TZ = True
 
 # Static Files
 STATIC_URL = '/static/'
-# STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default Auto Field
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# MapBox Map settings
+LOCATION_FIELD = {
+    'provider.mapbox.access_token': config('MAPBOX_TOKEN'),
+    'provider.mapbox.max_zoom': 18,
+    'provider.mapbox.id': 'mapbox.streets',
+}
