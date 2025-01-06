@@ -13,6 +13,17 @@ DEBUG = False
 # Allowed Hosts
 ALLOWED_HOSTS = []
 
+# Email
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # For development
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend' # For production
+EMAIL_HOST = 'smtp.gmail.com'  # email provider's SMTP server
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD') 
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
+
+
 # Installed Apps
 INSTALLED_APPS = [
     # Default Django apps
@@ -36,14 +47,15 @@ INSTALLED_APPS = [
     # External apps
     'location_field.apps.DefaultConfig',
     'drf_yasg',
-    
+    'corsheaders',
 ]
 
 # Middleware
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', #whitenoise
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware', #corsheaders
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',

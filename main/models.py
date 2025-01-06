@@ -18,7 +18,7 @@ class Ticket(models.Model):
     is_free = models.BooleanField(default=False)  # Added field for free events
     city = models.CharField(max_length=255, default="")
     location = PlainLocationField(based_fields=['city'], zoom=7, default=False) # Added field for map
-    number_of_tickets = models.PositiveIntegerField(default=1)
+    total_tickets = models.PositiveIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -27,6 +27,12 @@ class Ticket(models.Model):
     
     def display_price(self):
         return "Free" if self.is_free else f"${self.price}"
+    
+    def tickets_reserved(self):
+        return Reservation.objects.filter(ticket=self).count()
+    
+    def tickets_remaining(self):
+        return self.total_tickets - self.tickets_reserved()
 
 # Event-specific Information
 class EventTicket(Ticket):
@@ -60,12 +66,30 @@ class EventTicket(Ticket):
     online_link = models.URLField(null=True, blank=True)  # Link for online events
     agenda = models.JSONField(default=list)  # Added field for agenda and time
     tags = models.ManyToManyField('Tag', blank=True, related_name='event_tickets')
+    seat_number = models.ManyToManyField('Seat', blank=True, related_name='event_seats')
 
     def __str__(self):
         return f"{self.id}"
     
     def get_status(self):
         return self.status
+    
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None  # Check if this is a new instance
+        super().save(*args, **kwargs)  # Save the ticket first
+
+        if is_new and self.total_tickets > 0:
+            for i in range(1, self.total_tickets + 1):
+                Seat.objects.create(ticket=self, seat_number=f"Seat-{i}")
+    
+
+class Seat(models.Model):
+    ticket = models.ForeignKey(EventTicket, on_delete=models.CASCADE, related_name="seats", null=True)
+    seat_number = models.CharField(max_length=20)
+    is_booked = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Seat {self.seat_number} ({'Reserved' if self.is_booked else 'Available'})"
 
 
 # Accommodation-specific Information
@@ -102,6 +126,7 @@ class Reservation(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE)
     reserved_at = models.DateTimeField(auto_now_add=True)
     is_paid = models.BooleanField(default=False)
+    seat_number = models.CharField(max_length=20, null=True, blank=True)
 
     def __str__(self):
         return f"Reserved for {self.ticket.title}"

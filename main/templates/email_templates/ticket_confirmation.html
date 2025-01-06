@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ticket Purchase Confirmation</title>
+</head>
+<body>
+    {% comment %} <h1>Thank you for your purchase, {{ user.username }}!</h1> {% endcomment %}
+    <p>You have successfully purchased a ticket for <strong>{{ ticket.title }}</strong>.</p>
+    <p><strong>Details:</strong></p>
+    <ul>
+        <li>Ticket ID: {{ ticket.ticket_id }}</li>
+        <li>Category: {{ ticket.category }}</li>
+        <li>Price: {{ ticket.display_price }}</li>
+    </ul> 
+    <p>We hope you enjoy the event!</p>
+</body>
+</html>

@@ -1,8 +1,12 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from .models import Ticket, EventTicket, AccommodationTicket, ParkingTicket, Reservation, Tag
-from .serializers import (TicketSerializer, EventTicketSerializer, 
+from django.core.mail import EmailMessage
+from django.conf import settings
+from django.template.loader import render_to_string
+from .mail import send_booking_email
+from .models import Ticket, EventTicket, AccommodationTicket, ParkingTicket, Reservation, Tag, Seat
+from .serializers import(TicketSerializer, EventTicketSerializer, 
                           AccommodationTicketSerializer, ParkingTicketSerializer, 
                           BulkTicketSerializer, ReservationSerializer,
                           TagSerializer)
@@ -19,9 +23,27 @@ class ReservationViewSet(viewsets.ModelViewSet):
     def reserve(self, request, pk=None):
         ticket = Ticket.objects.get(pk=pk)
         user = request.user
+        seat_id = request.data.get('seat_id')
 
         if Reservation.objects.filter(ticket=ticket, user=user).exists():
             return Response({"error": "You have already reserved this ticket."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if ticket.tickets_remaining() <= 0:
+            return Response({"error": "No tickets remaining."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        seat_number = request.data.get('seat_number')
+        if isinstance(ticket, EventTicket) and not seat_number:
+            return Response({"error": "Seat number is required for event reservations."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if the seat is valid and available
+        try:
+            seat = Seat.objects.get(id=seat_id, ticket=ticket, is_reserved=False)
+        except Seat.DoesNotExist:
+            return Response({"error": "Seat is either invalid or already reserved."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Reserve the seat
+        seat.is_reserved = True
+        seat.save()
 
         reservation = Reservation.objects.create(ticket=ticket, user=user)
         return Response(ReservationSerializer(reservation).data, status=status.HTTP_201_CREATED)
@@ -34,6 +56,16 @@ class ReservationViewSet(viewsets.ModelViewSet):
         reservation, created = Reservation.objects.get_or_create(ticket=ticket, user=user)
         reservation.is_paid = True
         reservation.save()
+
+        subject = f"Ticket Purchase Confirmation: {ticket.title}"
+        html_content = render_to_string('email_templates/ticket_confirmation.html', {
+            'user': user,
+            'ticket': ticket,
+        })
+        email = EmailMessage(subject, html_content, settings.DEFAULT_FROM_EMAIL, [user.email])
+        email.content_subtype = 'html'  # Use HTML content
+        email.send()
+
         return Response(ReservationSerializer(reservation).data, status=status.HTTP_200_OK)
 
 class EventTicketViewSet(viewsets.ModelViewSet):
