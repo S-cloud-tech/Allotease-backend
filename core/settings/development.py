@@ -1,8 +1,8 @@
 from .base import *
 
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', ]
 
 CORS_ALLOW_ALL_ORIGINS = True
 

@@ -1,5 +1,7 @@
+import os
 from pathlib import Path
 from decouple import config
+import dj_database_url  
 
 # Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -96,6 +98,9 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+database_url = os.environ.get("DATABASE_URL")
+DATABASES = ["default"] = dj_database_url.parse(database_url)
 
 # Password Validators
 AUTH_PASSWORD_VALIDATORS = [
