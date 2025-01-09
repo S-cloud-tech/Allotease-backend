@@ -6,18 +6,15 @@ from django.conf import settings
 from django.template.loader import render_to_string
 from .mail import send_booking_email
 from .models import Ticket, EventTicket, AccommodationTicket, ParkingTicket, Reservation, Tag, Seat
-from .serializers import(TicketSerializer, EventTicketSerializer, 
-                          AccommodationTicketSerializer, ParkingTicketSerializer, 
-                          BulkTicketSerializer, ReservationSerializer,
-                          TagSerializer)
+from . import serializers
 
 class TicketViewSet(viewsets.ModelViewSet):
     queryset = Ticket.objects.all()
-    serializer_class = TicketSerializer
+    serializer_class = serializers.TicketSerializer
 
 class ReservationViewSet(viewsets.ModelViewSet):
     queryset = Reservation.objects.all()
-    serializer_class = ReservationSerializer
+    serializer_class = serializers.ReservationSerializer
 
     @action(detail=True, methods=['post'])
     def reserve(self, request, pk=None):
@@ -46,7 +43,7 @@ class ReservationViewSet(viewsets.ModelViewSet):
         seat.save()
 
         reservation = Reservation.objects.create(ticket=ticket, user=user)
-        return Response(ReservationSerializer(reservation).data, status=status.HTTP_201_CREATED)
+        return Response(serializers.ReservationSerializer(reservation).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'])
     def purchase(self, request, pk=None):
@@ -66,11 +63,11 @@ class ReservationViewSet(viewsets.ModelViewSet):
         email.content_subtype = 'html'  # Use HTML content
         email.send()
 
-        return Response(ReservationSerializer(reservation).data, status=status.HTTP_200_OK)
+        return Response(serializers.ReservationSerializer(reservation).data, status=status.HTTP_200_OK)
 
 class EventTicketViewSet(viewsets.ModelViewSet):
     queryset = EventTicket.objects.all()
-    serializer_class = EventTicketSerializer
+    serializer_class = serializers.EventTicketSerializer
 
     def create(self, request, *args, **kwargs):
         if request.data.get('category') == 'event':
@@ -82,7 +79,7 @@ class EventTicketViewSet(viewsets.ModelViewSet):
 
 class AccommodationTicketViewSet(viewsets.ModelViewSet):
     queryset = AccommodationTicket.objects.all()
-    serializer_class = AccommodationTicketSerializer
+    serializer_class = serializers.AccommodationTicketSerializer
 
     def create(self, request, *args, **kwargs):
         if request.data.get('category') == 'accommodation':
@@ -94,7 +91,7 @@ class AccommodationTicketViewSet(viewsets.ModelViewSet):
 
 class ParkingTicketViewSet(viewsets.ModelViewSet):
     queryset = ParkingTicket.objects.all()
-    serializer_class = ParkingTicketSerializer
+    serializer_class = serializers.ParkingTicketSerializer
 
     def create(self, request, *args, **kwargs):
         if request.data.get('category') == 'parking':
@@ -104,13 +101,13 @@ class ParkingTicketViewSet(viewsets.ModelViewSet):
 
 class BulkTicketCreateView(viewsets.ViewSet):
     def create(self, request, *args, **kwargs):
-        serializer = BulkTicketSerializer(data=request.data)
+        serializer = serializers.BulkTicketSerializer(data=request.data)
         if serializer.is_valid():
             tickets = serializer.save()
-            return Response({"tickets": TicketSerializer(tickets, many=True).data}, status=status.HTTP_201_CREATED)
+            return Response({"tickets": serializers.TicketSerializer(tickets, many=True).data}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.all()
-    serializer_class = TagSerializer
+    serializer_class = serializers.TagSerializer

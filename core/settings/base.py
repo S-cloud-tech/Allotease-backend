@@ -9,6 +9,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # Secret key
 SECRET_KEY = config('SECRET_KEY')
 
+AUTH_USER_MODEL = 'accounts.Account'
+
 # Debug
 DEBUG = False
 
@@ -99,8 +101,12 @@ DATABASES = {
     }
 }
 
-database_url = os.environ.get("DATABASE_URL")
-DATABASES = ["default"] = dj_database_url.parse(database_url)
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    )
+}
+
 
 # Password Validators
 AUTH_PASSWORD_VALIDATORS = [

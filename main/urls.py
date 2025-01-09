@@ -14,5 +14,5 @@ router.register(r'tags', TagViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('bulk-create-tickets/', BulkTicketCreateView.as_view({'post': 'create'})),
+    # path('bulk-create-tickets/', BulkTicketCreateView.as_view({'post': 'create'})),
 ]
