@@ -1,7 +1,8 @@
 import os
 from pathlib import Path
 from decouple import config
-import dj_database_url  
+import dj_database_url
+from datetime import timedelta  
 
 # Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -20,7 +21,7 @@ ALLOWED_HOSTS = []
 # Email
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # For development
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend' # For production
-EMAIL_HOST = 'smtp.gmail.com'  # email provider's SMTP server
+EMAIL_HOST = config('EMAIL_HOST')
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = config('EMAIL_HOST_USER')
@@ -40,6 +41,8 @@ INSTALLED_APPS = [
 
     # Authentication
     'rest_framework',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
@@ -53,6 +56,19 @@ INSTALLED_APPS = [
     'drf_yasg',
     'corsheaders',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    )
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+}
 
 # Middleware
 MIDDLEWARE = [
@@ -100,13 +116,6 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
-}
-
 
 # Password Validators
 AUTH_PASSWORD_VALIDATORS = [

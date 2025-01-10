@@ -49,12 +49,13 @@ class Account(AbstractBaseUser, PermissionsMixin):
     is_verified = models.BooleanField(default=False)
     first_name = models.CharField(max_length=30, null=True, blank=True)
     last_name = models.CharField(max_length=30, null=True, blank=True)
-    fullname = models.CharField(max_length=50, null=True, blank=True)
 
     # Custom fields
-    profile_image = ResizedImageField(size=[100, 100], upload_to=upload_location, default="avatar.png",
-                                      blank=True, null=True,
-                                      )  # Where user is registering
+    profile_image = ResizedImageField(size=[100, 100], upload_to=upload_location, default="avatar.png",blank=True, 
+                                      null=True,)  # Where user is registering
+    email_verified = models.BooleanField(default=False)
+    otp = models.CharField(max_length=6, blank=True, null=True)
+    otp_created_at = models.DateTimeField(blank=True, null=True)
     
 
 
