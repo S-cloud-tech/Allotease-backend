@@ -1,12 +1,16 @@
 from rest_framework import viewsets, status
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.core.mail import EmailMessage
 from django.conf import settings
 from django.template.loader import render_to_string
 from .mail import send_booking_email
-from .models import Ticket, EventTicket, AccommodationTicket, ParkingTicket, Reservation, Tag, Seat
+from .models import Ticket, EventTicket, AccommodationTicket, ParkingTicket, Reservation, Tag, Seat, CheckIn
 from . import serializers
+from .utils.qr_code import generate_qr_code
+from .utils.seat_assignment import assign_seat
 
 class TicketViewSet(viewsets.ModelViewSet):
     queryset = Ticket.objects.all()
@@ -76,6 +80,7 @@ class EventTicketViewSet(viewsets.ModelViewSet):
             if request.data.get('agenda') and not isinstance(request.data['agenda'], list):
                 return Response({"error": "Agenda must be a list of dictionaries with agenda details and times."}, status=status.HTTP_400_BAD_REQUEST)
         return super().create(request, *args, **kwargs)
+    
 
 class AccommodationTicketViewSet(viewsets.ModelViewSet):
     queryset = AccommodationTicket.objects.all()
@@ -98,6 +103,43 @@ class ParkingTicketViewSet(viewsets.ModelViewSet):
             if not all(k in request.data for k in ['parking_slot', 'valid_from', 'valid_until']):
                 return Response({"error": "Parking tickets must include parking slot, valid from, and valid until details."}, status=status.HTTP_400_BAD_REQUEST)
         return super().create(request, *args, **kwargs)
+
+class RegisterForEventAPI(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        event_id = request.data.get('event_id')
+
+        try:
+            event = EventTicket.objects.get(id=event_id)
+            seat = assign_seat(event)
+
+            if not seat:
+                return Response({"error": "No available seats for this event."}, status=400)
+
+            ticket = Ticket.objects.create(user=user, event=event, seat=seat)
+            qr_data = f"Ticket ID: {ticket.id}, Event: {event.name}, Seat: {seat.row}-{seat.seat_number}"
+            ticket.qr_code.save(f"ticket_{ticket.id}.png", generate_qr_code(qr_data))
+
+            serializer = serializers.TicketSerializer(ticket)
+            return Response(serializer.data)
+
+        except EventTicket.DoesNotExist:
+            return Response({"error": "Event not found."}, status=404)
+
+class CheckInAPI(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        ticket_id = request.data.get('ticket_id')
+
+        try:
+            ticket = Ticket.objects.get(id=ticket_id)
+            CheckIn.objects.create(ticket=ticket)
+            return Response({"message": "Check-in successful."})
+        except Ticket.DoesNotExist:
+            return Response({"error": "Invalid ticket."}, status=404)
 
 class BulkTicketCreateView(viewsets.ViewSet):
     def create(self, request, *args, **kwargs):

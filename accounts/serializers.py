@@ -1,10 +1,10 @@
 from rest_framework import serializers
+from django.contrib.auth import authenticate
 from django.utils.timezone import now, timedelta
 from . models import Account
 
 class RegisterSerializer(serializers.ModelSerializer):
     password2 = serializers.CharField(style={'input_type' : 'password'}, write_only=True)
-    # firstname = serializers.CharField(required=True)
 
     class Meta:
         model = Account
@@ -43,21 +43,89 @@ class RegisterSerializer(serializers.ModelSerializer):
         account.save()
         return account
 
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        email = data.get('email')
+        password = data.get('password')
+
+        user = authenticate(username=email, password=password)
+        if not user:
+            raise serializers.ValidationError("Invalid email or password.")
+
+        if not user.email_verified:
+            raise serializers.ValidationError("Email is not verified. Please verify your email before logging in.")
+
+        data['user'] = user
+        return data
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email_or_phone = serializers.CharField()
+
+    def validate_email_or_phone(self, value):
+        if '@' in value:  # Assume it's an email
+            if not Account.objects.filter(email=value).exists():
+                raise serializers.ValidationError("No user is associated with this email.")
+        else:  # Assume it's a phone number
+            if not Account.objects.filter(phone_number=value).exists():
+                raise serializers.ValidationError("No user is associated with this phone number.")
+        return value
+
+class PasswordResetSerializer(serializers.Serializer):
+    email_or_phone = serializers.CharField()
+    otp = serializers.CharField(max_length=6)
+    new_password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        email_or_phone = data.get('email_or_phone')
+        otp = data.get('otp')
+
+        if '@' in email_or_phone:  # Handle email
+            user = Account.objects.filter(email=email_or_phone).first()
+        else:  # Handle phone
+            user = Account.objects.filter(phone_number=email_or_phone).first()
+
+        if not user:
+            raise serializers.ValidationError("User not found.")
+
+        if user.otp != otp:
+            raise serializers.ValidationError("Invalid OTP.")
+
+        # Check if OTP has expired
+        if user.otp_created_at and (now() - user.otp_created_at) > timedelta(minutes=10):
+            raise serializers.ValidationError("OTP has expired.")
+
+        data['user'] = user
+        return data
+
+    def save(self):
+        user = self.validated_data['user']
+        user.set_password(self.validated_data['new_password'])
+        user.otp = None  # Clear the OTP after successful password reset
+        user.otp_created_at = None
+        user.save()
+        return user
+
+
 class AccountSerializer(serializers.ModelSerializer):
     id = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Account
         fields = [
-            'id','fullname', 'email',
+            'id','first_name', 'last_name', 'email',
             'phone','profile_image',
         ]
 
     # This is to update user details 
     def update(self, instance,validated_data):
 
-        if self.validated_data.get('fullname'):
-            instance.fullname=self.validated_data['fullname']
+        if self.validated_data.get('first_name'):
+            instance.first_name=self.validated_data['first_name']
+        if self.validated_data.get('last_name'):
+            instance.last_name=self.validated_data['last_name']
         if self.validated_data.get('phone'):
             instance.phone=self.validated_data['phone']
         if self.validated_data.get('email'):
@@ -94,7 +162,7 @@ class VerifyOTPSerializer(serializers.Serializer):
         if user.otp != data['otp']:
             raise serializers.ValidationError("Invalid OTP.")
         
-        if user.otp_created_at and user.otp_created_at + timedelta(minutes=10) < now():
+        if user.otp_created_at and (now() - user.otp_created_at) > timedelta(minutes=10):
             raise serializers.ValidationError("OTP has expired.")
 
         return data

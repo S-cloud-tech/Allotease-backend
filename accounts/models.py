@@ -54,6 +54,8 @@ class Account(AbstractBaseUser, PermissionsMixin):
     profile_image = ResizedImageField(size=[100, 100], upload_to=upload_location, default="avatar.png",blank=True, 
                                       null=True,)  # Where user is registering
     email_verified = models.BooleanField(default=False)
+    phone_number = models.CharField(max_length=15, unique=True, blank=True, null=True)
+    phone_verified = models.BooleanField(default=False)
     otp = models.CharField(max_length=6, blank=True, null=True)
     otp_created_at = models.DateTimeField(blank=True, null=True)
     
@@ -65,3 +67,15 @@ class Account(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+
+class MerchantType(models.Model):
+    pass
+
+
+class Merchant(models.Model):
+    user = models.OneToOneField(Account, on_delete=models.CASCADE, null=True)
+    merchant_type = models.ForeignKey(MerchantType, on_delete=models.CASCADE, null=True)
+    active          = models.BooleanField(default=True)
+    is_verified     = models.BooleanField(default=False)
+    is_online       = models.BooleanField(default=False)

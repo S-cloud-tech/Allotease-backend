@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Ticket, EventTicket, AccommodationTicket, ParkingTicket, Reservation, Tag, Seat
+from .models import Ticket, EventTicket, AccommodationTicket, ParkingTicket, Reservation, Tag, Seat, CheckIn
 
 class TicketSerializer(serializers.ModelSerializer):
     display_price = serializers.SerializerMethodField()
@@ -18,7 +18,7 @@ class TicketSerializer(serializers.ModelSerializer):
 class SeatSerializer(serializers.ModelSerializer):
     class Meta:
         model = Seat
-        fields = ['id', 'seat_number', 'is_booked']
+        fields = ['id', 'seat_number', 'is_booked', 'row']
 
 class EventTicketSerializer(serializers.ModelSerializer):
     display_price = serializers.SerializerMethodField()
@@ -89,6 +89,11 @@ class ParkingTicketSerializer(serializers.ModelSerializer):
     
     def get_tickets_remaining(self, obj):
          return obj.tickets_remaining()
+
+class CheckInSerialiezer(serializers.ModelSerializer):
+     class Meta:
+          model = CheckIn
+          fields = ['ticket', 'check_in_time']
 
 class BulkTicketSerializer(serializers.Serializer):
     tickets = TicketSerializer(many=True)

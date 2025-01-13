@@ -1,6 +1,7 @@
 from django.db import models
 import uuid
 from location_field.models.plain import PlainLocationField
+from accounts.models import Account
 
 
 class Ticket(models.Model):
@@ -67,6 +68,8 @@ class EventTicket(Ticket):
     agenda = models.JSONField(default=list)  # Added field for agenda and time
     tags = models.ManyToManyField('Tag', blank=True, related_name='event_tickets')
     seat_number = models.ManyToManyField('Seat', blank=True, related_name='event_seats')
+    seat = models.OneToOneField('main.Seat', on_delete=models.SET_NULL, null=True, blank=True)
+    qr_code = models.ImageField(upload_to='qr_codes/', null=True, blank=True)
 
     def __str__(self):
         return f"{self.id}"
@@ -85,6 +88,7 @@ class EventTicket(Ticket):
 
 class Seat(models.Model):
     ticket = models.ForeignKey(EventTicket, on_delete=models.CASCADE, related_name="seats", null=True)
+    row = models.CharField(max_length=10, null=True)
     seat_number = models.CharField(max_length=20)
     is_booked = models.BooleanField(default=False)
 
@@ -115,6 +119,12 @@ class ParkingTicket(Ticket):
 
     def __str__(self):
         return f"{self.id}"
+
+
+class CheckIn(models.Model):
+    ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE)
+    check_in_time =  models.DateTimeField(auto_now_add=True)
+
 
 class Tag(models.Model):
     name = models.CharField(max_length=50, unique=True)
