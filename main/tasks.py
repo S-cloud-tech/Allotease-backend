@@ -11,3 +11,11 @@ def send_ticket_email(ticket_id):
         'no-reply@example.com',
         [ticket.user.email],
     )
+
+@shared_task
+def process_real_time_data(event_id, data):
+    from .models import EventAnalytics
+    analytics, created = EventAnalytics.objects.get_or_create(event_id=event_id)
+    analytics.data.update(data)
+    analytics.save()
+    return f"Analytics updated for event {event_id}"

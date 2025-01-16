@@ -67,8 +67,8 @@ class EventTicket(Ticket):
     online_link = models.URLField(null=True, blank=True)  # Link for online events
     agenda = models.JSONField(default=list)  # Added field for agenda and time
     tags = models.ManyToManyField('Tag', blank=True, related_name='event_tickets')
-    seat_number = models.ManyToManyField('Seat', blank=True, related_name='event_seats')
-    seat = models.OneToOneField('main.Seat', on_delete=models.SET_NULL, null=True, blank=True)
+    # seat_number = models.ManyToManyField('Seat', blank=True, related_name='event_seats')
+    seat = models.OneToOneField('Seat', on_delete=models.SET_NULL, null=True, blank=True)
     qr_code = models.ImageField(upload_to='qr_codes/', null=True, blank=True)
 
     def __str__(self):

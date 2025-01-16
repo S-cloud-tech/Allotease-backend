@@ -10,3 +10,13 @@ def assign_seat(event):
             seat.save()
             return seat
     return None
+
+def allocate_seat(event, user):
+    seat = Seat.objects.filter(is_reserved=False).first()
+    if seat:
+        seat.is_reserved = True
+        seat.save()
+        return seat
+    else:
+        return None
+

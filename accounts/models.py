@@ -23,13 +23,13 @@ class AccountManager(BaseUserManager):
         user.save(using=self._db)
         return user
     
-    def create_superuser(self, username, password=None):
+    def create_superuser(self, email, password=None):
         if password is None:
             raise TypeError('Password should not be empty')
-        if username is None:
-            raise TypeError('User should have a Username')
+        if email is None:
+            raise TypeError('User should have an email')
         
-        user = self.create_user(username, password)
+        user = self.create_user(email, password)
         user.is_superuser = True
         user.is_staff = True
         user.save()
@@ -69,13 +69,19 @@ class Account(AbstractBaseUser, PermissionsMixin):
         return self.email
 
 
-class MerchantType(models.Model):
-    pass
+class Merchant_Type(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, editable=False,unique=True, null=False, primary_key=True)
 
 
 class Merchant(models.Model):
     user = models.OneToOneField(Account, on_delete=models.CASCADE, null=True)
-    merchant_type = models.ForeignKey(MerchantType, on_delete=models.CASCADE, null=True)
+    merchant_type = models.ForeignKey(Merchant_Type, on_delete=models.CASCADE, null=True)
     active          = models.BooleanField(default=True)
     is_verified     = models.BooleanField(default=False)
     is_online       = models.BooleanField(default=False)
+    completed_events = models.IntegerField(default = 0, null=True, blank = True)
+    cancelled_events = models.IntegerField(default = 0, null=True, blank = True)
+    total_events     = models.IntegerField(default = 0, null=True, blank = True)
+
+    def _str_(self):
+        return self.merchant_type
