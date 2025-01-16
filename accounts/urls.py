@@ -1,5 +1,10 @@
 from django.urls import path
-from .views import RegisterView, LoginView, SendOTPView, VerifyOTPView, PasswordResetRequestView, PasswordResetView
+from django.conf import settings
+from django.conf.urls.static import static
+from .views import (RegisterView, LoginView, SendOTPView, 
+                    VerifyOTPView, PasswordResetRequestView, 
+                    PasswordResetView, AccountProfileView, 
+                    )
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name="register"),
@@ -8,4 +13,7 @@ urlpatterns = [
     path('verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
     path('password-reset-request/', PasswordResetRequestView.as_view(), name='password_reset_request'),
     path('password-reset/', PasswordResetView.as_view(), name='password_reset'),
+    path('profile/', AccountProfileView.as_view(), name='user_profile'),
 ]
+
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

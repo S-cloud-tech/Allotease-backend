@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import authenticate
 from django.utils.timezone import now, timedelta
 from . models import Account
+from . utility import send_otp_email, send_otp_sms, generate_otp
 
 class RegisterSerializer(serializers.ModelSerializer):
     password2 = serializers.CharField(style={'input_type' : 'password'}, write_only=True)
@@ -20,6 +21,25 @@ class RegisterSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
+        user = Account.objects.create(
+            username=validated_data['username'],
+            email=validated_data['email'],
+            phone_number=validated_data['phone_number'],
+        )
+        user.set_password(validated_data['password'])
+        user.save()
+
+        # Send OTPs
+        otp = generate_otp()
+        user.otp = otp
+        user.otp_created_at = now()
+        user.save()
+
+        if validated_data['email']:
+            send_otp_email(user.email, otp)
+
+        if validated_data['phone_number']:
+            send_otp_sms(user.phone_number, otp)
         return Account.objects.create_user(**validated_data)
     
     def save(self):
@@ -32,10 +52,6 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'password' : 'Passwords do not match.'})  #Make sure that passwords match
 
         account = Account (
-            # phone=self.validated_data['phone'],
-            # fullname = self.validated_data['fullname'],
-            # first_name = self.validated_data['first_name'],
-            # last_name = self.validated_data['last_name'],
             email = self.validated_data['email'],
         )
         
@@ -114,10 +130,10 @@ class AccountSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Account
-        fields = [
-            'id','first_name', 'last_name', 'email',
-            'phone','profile_image',
-        ]
+        fields = ['id', 'username', 'email', 'phone_number', 
+                  'first_name', 'last_name', 'profile_image', 
+                  'email_verified', 'phone_verified']
+        read_only_fields = ['id', 'email_verified', 'phone_verified']
 
     # This is to update user details 
     def update(self, instance,validated_data):
@@ -126,8 +142,8 @@ class AccountSerializer(serializers.ModelSerializer):
             instance.first_name=self.validated_data['first_name']
         if self.validated_data.get('last_name'):
             instance.last_name=self.validated_data['last_name']
-        if self.validated_data.get('phone'):
-            instance.phone=self.validated_data['phone']
+        if self.validated_data.get('phone_number'):
+            instance.phone=self.validated_data['phone_number']
         if self.validated_data.get('email'):
             instance.email=self.validated_data['email']
         if self.validated_data.get('profile_image'):
@@ -136,6 +152,30 @@ class AccountSerializer(serializers.ModelSerializer):
         # Save the instance 
         instance.save()
         return instance
+
+
+class UpdateAccountProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Account
+        fields = ['username', 'phone_number', 'first_name', 'last_name', 'profile_image']
+
+
+        def update(self, instance, validated_data):
+            if 'email' in validated_data and instance.email != validated_data['email']:
+                instance.email_verified = False
+                otp = generate_otp()
+                send_otp_email(validated_data['email'], otp)
+                instance.otp = otp
+                instance.otp_created_at = now()
+
+            if 'phone_number' in validated_data and instance.phone_number != validated_data['phone_number']:
+                instance.phone_verified = False
+                otp = generate_otp()
+                send_otp_sms(validated_data['phone_number'], otp)
+                instance.otp = otp
+                instance.otp_created_at = now()
+
+            return super().update(instance, validated_data)
 
 
 class SendOTPSerializer(serializers.Serializer):
@@ -150,19 +190,31 @@ class SendOTPSerializer(serializers.Serializer):
 
 
 class VerifyOTPSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    email = serializers.EmailField(required=False)
+    phone_number = serializers.CharField(required=False)
     otp = serializers.CharField(max_length=6)
 
     def validate(self, data):
-        try:
-            user = Account.objects.get(email=data['email'])
-        except Account.DoesNotExist:
-            raise serializers.ValidationError("User with this email does not exist.")
+        email = data.get('email')
+        phone_number = data.get('phone_number')
+        otp = data.get('otp')
 
-        if user.otp != data['otp']:
+        try:
+            if email:
+                user = Account.objects.get(email=email)
+            elif phone_number:
+                user = Account.objects.get(phone_number=phone_number)
+            else:
+                raise serializers.ValidationError("Either email or phone number is required.")
+        except Account.DoesNotExist:
+            raise serializers.ValidationError("User not found.")
+
+        if user.otp != otp:
             raise serializers.ValidationError("Invalid OTP.")
-        
+
+        # Check OTP expiration (10 minutes)
         if user.otp_created_at and (now() - user.otp_created_at) > timedelta(minutes=10):
             raise serializers.ValidationError("OTP has expired.")
 
+        data['user'] = user
         return data

@@ -2,7 +2,9 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.authtoken.models import Token
+from django.shortcuts import render, get_object_or_404, redirect
 from django.utils.timezone import now, timedelta
+from django.core.cache import cache
 from . import serializers
 from .models import Account
 from .utility import generate_otp, send_otp_email, send_otp_sms
@@ -21,14 +23,6 @@ class RegisterView(generics.GenericAPIView):
             user_data = serializer.data
             user = Account.objects.get(email=user_data['email'])
             token = RefreshToken.for_user(user)
-
-            # Generate and send OTP
-            otp = generate_otp()
-            user.otp = otp
-            user.otp_created_at = now()
-            user.save()
-
-            send_otp_email(user.email, otp)
 
             return Response({
                 "message": "User registered successfully. An OTP has been sent to your email for verification."
@@ -78,23 +72,57 @@ class SendOTPView(generics.GenericAPIView):
 # Verifying the sent OTP
 class VerifyOTPView(generics.GenericAPIView):
     serializer_class = serializers.VerifyOTPSerializer
+    OTP_RETRY_LIMIT = 5  # Maximum allowed attempts
+    OTP_RETRY_TIMEOUT = 300  # Timeout in seconds (5 minutes)
 
     def post(self, request):
+        email = request.data.get("email", None)
+        phone_number = request.data.get("phone_number", None)
+
+        # Create a unique cache key based on the identifier
+        identifier = email if email else phone_number
+        if not identifier:
+            return Response({"error": "Email or phone number is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        cache_key = f"otp_attempts_{identifier}"
+
+        # Get the current number of attempts
+        attempts = cache.get(cache_key, 0)
+
+        # Check if the user has exceeded the retry limit
+        if attempts >= self.OTP_RETRY_LIMIT:
+            return Response(
+                {"error": "Too many invalid attempts. Please try again later."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+
+        # Validate OTP
         serializer = serializers.VerifyOTPSerializer(data=request.data)
         if serializer.is_valid():
-            email = serializer.validated_data['email']
-            user = Account.objects.get(email=email)
+            user = serializer.validated_data["user"]
 
-            # Mark email as verified
-            user.email_verified = True
-            user.otp = None
+            if "email" in request.data:
+                user.email_verified = True
+            if "phone_number" in request.data:
+                user.phone_verified = True
+
+            user.otp = None  # Clear OTP after successful verification
             user.otp_created_at = None
             user.save()
 
-            return Response({"message": "Email verified successfully."}, status=status.HTTP_200_OK)
+            # Clear cache on successful verification
+            cache.delete(cache_key)
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+            return Response({"message": "Verification successful."}, status=status.HTTP_200_OK)
+        else:
+            # Increment the number of attempts
+            cache.set(cache_key, attempts + 1, self.OTP_RETRY_TIMEOUT)
+            return Response(
+                {"error": "Invalid OTP. Please try again."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        
 # Request for password reset
 class PasswordResetRequestView(generics.GenericAPIView):
     serializer_class = serializers.PasswordResetRequestSerializer
@@ -132,4 +160,31 @@ class PasswordResetView(generics.GenericAPIView):
             return Response({"message": "Password reset successfully."}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AccountProfileView(generics.RetrieveAPIView):
+    serializer_class = serializers.AccountSerializer
+    permission_classes = []
+
+    def get(self, request):
+        """Retrieve the authenticated user's profile."""
+        user = request.user
+        serializer = serializers.AccountSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request):
+        """Update the authenticated user's profile."""
+        user = request.user
+        serializer = serializers.UpdateAccountProfileSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request):
+        """Delete the authenticated user's profile."""
+        user = request.user
+        user.delete()
+        return Response({"message": "User profile deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+
 
