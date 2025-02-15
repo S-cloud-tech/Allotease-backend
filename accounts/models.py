@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-from django.core.mail import message
 from django_resized import ResizedImageField
+from wallet.models import Wallet
 import uuid
 
 
@@ -69,13 +69,26 @@ class Account(AbstractBaseUser, PermissionsMixin):
         return self.email
 
 
-class Merchant_Type(models.Model):
-    id = models.UUIDField(default=uuid.uuid4, editable=False,unique=True, null=False, primary_key=True)
-
 
 class Merchant(models.Model):
+
+    INDIVIDUAL = 'INDIVIDUAL'
+    COMPANY = 'COMPANY'
+    NONPROFIT = 'NONPROFIT'
+    EDUCATIONAL = 'EDUCATIONAL'
+    GOVERNMENT = 'GOVERNMENT'
+
+    MERCHANT_TYPE = [
+        ('INDIVIDUAL','INDIVIDUAL'),
+        ('COMPANY','COMPANY'),
+        ('NONPROFIT','NONPROFIT'),
+        ('EDUCATIONAL','EDUCATIONAL'),
+        ('GOVERNMENT','GOVERNMENT'),
+    ]
+
+
     user = models.OneToOneField(Account, on_delete=models.CASCADE, null=True)
-    merchant_type = models.ForeignKey(Merchant_Type, on_delete=models.CASCADE, null=True)
+    wallet = models.OneToOneField(Wallet, on_delete=models.CASCADE, null=True)
     active          = models.BooleanField(default=True)
     is_verified     = models.BooleanField(default=False)
     is_online       = models.BooleanField(default=False)
@@ -84,4 +97,4 @@ class Merchant(models.Model):
     total_events     = models.IntegerField(default = 0, null=True, blank = True)
 
     def _str_(self):
-        return self.merchant_type
+        return self.user

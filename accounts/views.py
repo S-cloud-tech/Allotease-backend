@@ -2,8 +2,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.authtoken.models import Token
-from django.shortcuts import render, get_object_or_404, redirect
-from django.utils.timezone import now, timedelta
+from django.utils.timezone import now
 from django.core.cache import cache
 from . import serializers
 from .models import Account
@@ -25,7 +24,7 @@ class RegisterView(generics.GenericAPIView):
             token = RefreshToken.for_user(user)
 
             return Response({
-                "message": "User registered successfully. An OTP has been sent to your email for verification."
+                "message": "User registered successfully. An OTP has been sent to your email for verification." # Remove in production
             }, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -44,7 +43,7 @@ class LoginView(generics.GenericAPIView):
 
             return Response({
                 "token": token.key,
-                "message": "Login successful."
+                "message": "Login successful." # Remove in production
             }, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -121,8 +120,7 @@ class VerifyOTPView(generics.GenericAPIView):
                 {"error": "Invalid OTP. Please try again."},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
-        
+     
 # Request for password reset
 class PasswordResetRequestView(generics.GenericAPIView):
     serializer_class = serializers.PasswordResetRequestSerializer

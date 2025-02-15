@@ -1,6 +1,5 @@
 import random
 from django.core.mail import send_mail
-from django.utils.timezone import now, timedelta
 from django.conf import settings
 from decouple import config
 from twilio.rest import Client
