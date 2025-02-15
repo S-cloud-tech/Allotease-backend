@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Account, Merchant, Merchant_Type
+from .models import Account, Merchant
 
 # Register your models here.
 class AccountAdmin(UserAdmin):
@@ -16,4 +16,3 @@ class AccountAdmin(UserAdmin):
 
 admin.site.register(Account)
 admin.site.register(Merchant)
-admin.site.register(Merchant_Type)

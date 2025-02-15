@@ -1,7 +1,7 @@
 from django.db import models
 import uuid
 from location_field.models.plain import PlainLocationField
-from accounts.models import Account
+from accounts.models import Account, Merchant
 
 
 class Ticket(models.Model):
@@ -63,6 +63,8 @@ class EventTicket(Ticket):
     choice = models.CharField(max_length=6, choices=EVENT_CHOICES, default=LIVE)
     has_started     = models.BooleanField(default=False)
     status = models.CharField(max_length=20, choices=STATUSES, default=NOT_STARTED)
+    user = models.ForeignKey(Account, blank=False, null=True, default=None, on_delete=models.CASCADE, related_name="regular")
+    organizer = models.ForeignKey(Merchant, null=True, blank=True, default=None, on_delete=models.CASCADE, related_name="merchant")
     is_online = models.BooleanField(default=False)  # Added field for online events
     online_link = models.URLField(null=True, blank=True)  # Link for online events
     agenda = models.JSONField(default=list)  # Added field for agenda and time
@@ -70,6 +72,8 @@ class EventTicket(Ticket):
     # seat_number = models.ManyToManyField('Seat', blank=True, related_name='event_seats')
     seat = models.OneToOneField('Seat', on_delete=models.SET_NULL, null=True, blank=True)
     qr_code = models.ImageField(upload_to='qr_codes/', null=True, blank=True)
+    start_date = models.DateTimeField(null=True)
+    end_date = models.DateTimeField(null=True)
 
     def __str__(self):
         return f"{self.id}"

@@ -16,11 +16,11 @@ AUTH_USER_MODEL = 'accounts.Account'
 DEBUG = False
 
 # Allowed Hosts
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 # Email
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # For development
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend' # For production
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # For development
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend' # For production
 EMAIL_HOST = config('EMAIL_HOST')
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
@@ -47,10 +47,12 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
     
     # Local apps
     'accounts',
     'main',
+    'wallet',
 
     # External apps
     'location_field.apps.DefaultConfig',
@@ -77,7 +79,11 @@ SIMPLE_JWT = {
 }
 
 AUTHENTICATION_BACKENDS = [
+    # Needed to login by username in Django admin, regardless of `allauth`
     'django.contrib.auth.backends.ModelBackend',
+
+    # `allauth` specific authentication methods, such as login by email
+    'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
 # Middleware
@@ -87,12 +93,28 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware', #corsheaders
     'django.middleware.common.CommonMiddleware',
+    'django.middleware.locale.LocaleMiddleware', #Internalization
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     "allauth.account.middleware.AccountMiddleware", #allauth
 ]
+
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        # For each OAuth based provider, either add a ``SocialApp``
+        # (``socialaccount`` app) containing the required client
+        # credentials, or list them here:
+        'APP': {
+            'client_id': config('client_id'),
+            'secret': config('secert'),
+            'key': ''
+        }
+    }
+}
+
 
 # Root URL
 ROOT_URLCONF = 'core.urls'
@@ -126,6 +148,8 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+DATABASES['default'] = dj_database_url.parse(config('External_Database_URL'))
 
 # Password Validators
 AUTH_PASSWORD_VALIDATORS = [
