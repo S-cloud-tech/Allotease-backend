@@ -9,7 +9,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Account
         fields = [
-            'email','password', 'password2',
+            'email','first_name','last_name','password', 'password2', 'phone_number'
             ]
         extra_kwarg = {
             'password' : {'write_only' : True}
@@ -116,7 +116,7 @@ class AccountSerializer(serializers.ModelSerializer):
         model = Account
         fields = [
             'id','first_name', 'last_name', 'email',
-            'phone','profile_image',
+            'phone_number','profile_image',
         ]
 
     # This is to update user details 
@@ -126,8 +126,8 @@ class AccountSerializer(serializers.ModelSerializer):
             instance.first_name=self.validated_data['first_name']
         if self.validated_data.get('last_name'):
             instance.last_name=self.validated_data['last_name']
-        if self.validated_data.get('phone'):
-            instance.phone=self.validated_data['phone']
+        if self.validated_data.get('phone_number'):
+            instance.phone=self.validated_data['phone_number']
         if self.validated_data.get('email'):
             instance.email=self.validated_data['email']
         if self.validated_data.get('profile_image'):

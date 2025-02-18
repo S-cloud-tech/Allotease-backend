@@ -16,9 +16,13 @@ class TicketViewSet(viewsets.ModelViewSet):
     queryset = Ticket.objects.all()
     serializer_class = serializers.TicketSerializer
 
+    permission_classes = [IsAuthenticated]
+
 class ReservationViewSet(viewsets.ModelViewSet):
     queryset = Reservation.objects.all()
     serializer_class = serializers.ReservationSerializer
+
+    permission_classes = [IsAuthenticated]
 
     @action(detail=True, methods=['post'])
     def reserve(self, request, pk=None):
@@ -73,6 +77,8 @@ class EventTicketViewSet(viewsets.ModelViewSet):
     queryset = EventTicket.objects.all()
     serializer_class = serializers.EventTicketSerializer
 
+    permission_classes = [IsAuthenticated]
+
     def create(self, request, *args, **kwargs):
         if request.data.get('category') == 'event':
             if request.data.get('is_online') and not request.data.get('online_link'):
@@ -86,6 +92,8 @@ class AccommodationTicketViewSet(viewsets.ModelViewSet):
     queryset = AccommodationTicket.objects.all()
     serializer_class = serializers.AccommodationTicketSerializer
 
+    permission_classes = [IsAuthenticated]
+
     def create(self, request, *args, **kwargs):
         if request.data.get('category') == 'accommodation':
             if not all(k in request.data for k in ['check_in', 'check_out']):
@@ -97,6 +105,8 @@ class AccommodationTicketViewSet(viewsets.ModelViewSet):
 class ParkingTicketViewSet(viewsets.ModelViewSet):
     queryset = ParkingTicket.objects.all()
     serializer_class = serializers.ParkingTicketSerializer
+
+    permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
         if request.data.get('category') == 'parking':

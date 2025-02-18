@@ -1,8 +1,9 @@
-from rest_framework import generics, status
+from rest_framework import generics, status, permissions
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.authtoken.models import Token
-from django.utils.timezone import now, timedelta
+from django.utils.timezone import now
 from . import serializers
 from .models import Account
 from .utility import generate_otp, send_otp_email, send_otp_sms
@@ -54,6 +55,26 @@ class LoginView(generics.GenericAPIView):
             }, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+# Delete User Account
+class DeleteUser (generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = serializers.AccountSerializer
+
+    def post(self, request):
+        user = request.user
+        stop = False
+        i = 1
+        while stop == False:
+            email = str(user.email)+"_deactivated"+str(i)
+            if Account.objects.filter(email=email).exists() == False:
+                user.email = email
+                user.is_active = False
+                user.save()
+            else:
+                i = i+1
+        return Response({"data":'Successfully Deleted your account'}, status=status.HTTP_200_OK)
 
 # Sending OTP to user's email   
 class SendOTPView(generics.GenericAPIView):

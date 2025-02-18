@@ -23,13 +23,13 @@ class AccountManager(BaseUserManager):
         user.save(using=self._db)
         return user
     
-    def create_superuser(self, username, password=None):
+    def create_superuser(self, email, password=None):
         if password is None:
             raise TypeError('Password should not be empty')
-        if username is None:
+        if email is None:
             raise TypeError('User should have a Username')
         
-        user = self.create_user(username, password)
+        user = self.create_user(email, password)
         user.is_superuser = True
         user.is_staff = True
         user.save()
@@ -56,6 +56,7 @@ class Account(AbstractBaseUser, PermissionsMixin):
     email_verified = models.BooleanField(default=False)
     phone_number = models.CharField(max_length=15, unique=True, blank=True, null=True)
     phone_verified = models.BooleanField(default=False)
+    paystack_virtual_account = models.JSONField(null=True, blank=True)
     otp = models.CharField(max_length=6, blank=True, null=True)
     otp_created_at = models.DateTimeField(blank=True, null=True)
     
@@ -79,3 +80,6 @@ class Merchant(models.Model):
     active          = models.BooleanField(default=True)
     is_verified     = models.BooleanField(default=False)
     is_online       = models.BooleanField(default=False)
+    completed_tickets = models.IntegerField(default = 0, null=True, blank = True)
+    cancelled_tickets = models.IntegerField(default = 0, null=True, blank = True)
+    total_created_tickets     = models.IntegerField(default = 0, null=True, blank = True)
