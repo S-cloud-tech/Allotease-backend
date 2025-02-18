@@ -115,7 +115,7 @@ class ParkingTicketViewSet(viewsets.ModelViewSet):
         return super().create(request, *args, **kwargs)
 
 class RegisterForEventAPI(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = []
 
     def post(self, request):
         user = request.user
@@ -139,7 +139,7 @@ class RegisterForEventAPI(APIView):
             return Response({"error": "Event not found."}, status=404)
 
 class CheckInAPI(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = []
 
     def post(self, request):
         ticket_id = request.data.get('ticket_id')

@@ -16,7 +16,7 @@ AUTH_USER_MODEL = 'accounts.Account'
 DEBUG = False
 
 # Allowed Hosts
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 # Email
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # For development
@@ -47,10 +47,12 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
     
     # Local apps
     'accounts',
     'main',
+    'wallet',
 
     # External apps
     'location_field.apps.DefaultConfig',
@@ -59,20 +61,29 @@ INSTALLED_APPS = [
 ]
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
 }
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
 }
 
 AUTHENTICATION_BACKENDS = [
+    # Needed to login by username in Django admin, regardless of `allauth`
     'django.contrib.auth.backends.ModelBackend',
+
+    # `allauth` specific authentication methods, such as login by email
+    'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
 # Middleware
@@ -82,12 +93,28 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware', #corsheaders
     'django.middleware.common.CommonMiddleware',
+    'django.middleware.locale.LocaleMiddleware', #Internalization
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     "allauth.account.middleware.AccountMiddleware", #allauth
 ]
+
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        # For each OAuth based provider, either add a ``SocialApp``
+        # (``socialaccount`` app) containing the required client
+        # credentials, or list them here:
+        'APP': {
+            'client_id': config('client_id'),
+            'secret': config('secert'),
+            'key': ''
+        }
+    }
+}
+
 
 # Root URL
 ROOT_URLCONF = 'core.urls'
@@ -153,4 +180,11 @@ LOCATION_FIELD = {
     'provider.mapbox.access_token': config('MAPBOX_TOKEN'),
     'provider.mapbox.max_zoom': 18,
     'provider.mapbox.id': 'mapbox.streets',
+}
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",  # Use Redis in production
+        "LOCATION": "unique-snowflake",
+    }
 }

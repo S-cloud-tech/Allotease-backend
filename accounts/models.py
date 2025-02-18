@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-from django.core.mail import message
 from django_resized import ResizedImageField
+from wallet.models import Wallet
 import uuid
 
 
@@ -27,7 +27,11 @@ class AccountManager(BaseUserManager):
         if password is None:
             raise TypeError('Password should not be empty')
         if email is None:
+<<<<<<< HEAD
             raise TypeError('User should have a Username')
+=======
+            raise TypeError('User should have an email')
+>>>>>>> 5e1d59cefb2a91bc494d515cc2450e8a9b51980b
         
         user = self.create_user(email, password)
         user.is_superuser = True
@@ -70,16 +74,38 @@ class Account(AbstractBaseUser, PermissionsMixin):
         return self.email
 
 
-class MerchantType(models.Model):
-    pass
-
 
 class Merchant(models.Model):
+
+    INDIVIDUAL = 'INDIVIDUAL'
+    COMPANY = 'COMPANY'
+    NONPROFIT = 'NONPROFIT'
+    EDUCATIONAL = 'EDUCATIONAL'
+    GOVERNMENT = 'GOVERNMENT'
+
+    MERCHANT_TYPE = [
+        ('INDIVIDUAL','INDIVIDUAL'),
+        ('COMPANY','COMPANY'),
+        ('NONPROFIT','NONPROFIT'),
+        ('EDUCATIONAL','EDUCATIONAL'),
+        ('GOVERNMENT','GOVERNMENT'),
+    ]
+
+
     user = models.OneToOneField(Account, on_delete=models.CASCADE, null=True)
-    merchant_type = models.ForeignKey(MerchantType, on_delete=models.CASCADE, null=True)
+    wallet = models.OneToOneField(Wallet, on_delete=models.CASCADE, null=True)
     active          = models.BooleanField(default=True)
     is_verified     = models.BooleanField(default=False)
     is_online       = models.BooleanField(default=False)
+<<<<<<< HEAD
     completed_tickets = models.IntegerField(default = 0, null=True, blank = True)
     cancelled_tickets = models.IntegerField(default = 0, null=True, blank = True)
     total_created_tickets     = models.IntegerField(default = 0, null=True, blank = True)
+=======
+    completed_events = models.IntegerField(default = 0, null=True, blank = True)
+    cancelled_events = models.IntegerField(default = 0, null=True, blank = True)
+    total_events     = models.IntegerField(default = 0, null=True, blank = True)
+
+    def _str_(self):
+        return self.user
+>>>>>>> 5e1d59cefb2a91bc494d515cc2450e8a9b51980b
