@@ -30,11 +30,10 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 
 
 # KUDA
-SECRET_KEY = config('SECRET_KEY')
 KUDA_KEY = config('KUDA_KEY')
 KUDA_TEST = config('KUDA_TEST')
 KUDA_EMAIL = config('KUDA_EMAIL')
-BASE_URL = config('base_url')
+KUDA_BASE_URL = config('KUDA_BASE_URL')
 
 # Installed Apps
 INSTALLED_APPS = [
