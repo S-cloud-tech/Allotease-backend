@@ -4,13 +4,12 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.authtoken.models import Token
 from django.utils.timezone import now
-<<<<<<< HEAD
-=======
 from django.core.cache import cache
->>>>>>> 5e1d59cefb2a91bc494d515cc2450e8a9b51980b
+from django.shortcuts import render
+from django.template.loader import render_to_string
 from . import serializers
 from .models import Account
-from .utility import generate_otp, send_otp_email, send_otp_sms
+from .utility import generate_otp, send_otp_email, send_otp_sms, generate_random_string, send_email
 
 # Register Users and Sending OTP to email
 class RegisterView(generics.GenericAPIView):
@@ -54,7 +53,7 @@ class LoginView(generics.GenericAPIView):
     
 
 # Delete User Account
-class DeleteUser (generics.GenericAPIView):
+class DeleteUser(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = serializers.AccountSerializer
 
@@ -185,7 +184,7 @@ class PasswordResetView(generics.GenericAPIView):
 
 
 class AccountProfileView(generics.RetrieveAPIView):
-    serializer_class = serializers.AccountSerializer
+    # serializer_class = serializers.AccountSerializer
     permission_classes = []
 
     def get(self, request):
@@ -210,3 +209,52 @@ class AccountProfileView(generics.RetrieveAPIView):
         return Response({"message": "User profile deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
 
 
+class CreateMerchant(APIView):
+    def get(self, request):
+        return render(request, 'driver_form.html')
+    
+    def post(self, request):
+
+        data = request.data
+        password = generate_random_string()
+        user = Account.objects.create_user(
+            phone=data["phone"], password=password, 
+        )
+        user.email = data["email"]
+        user.username = data["username"]
+        user.first_name = data["firstName"]
+        user.last_name = data["lastName"]
+        user.fullname = f"{data['firstName']} {data['lastName']}"
+        user.phone_verified = True
+        user.is_verified = True
+        user.save()
+
+        # driver_type = DriverType.objects.get(type_name=data["driverType"])
+      
+        # Driver.objects.create(
+        #     user=user,
+        #     driver_license_number=data["driverLicenseNumber"],
+        #     driver_type=driver_type,
+        #     driver_license_image = data["driverLicenseImage"],
+        # )
+
+        mail_subject = "Welcome"
+        html_message = render_to_string('welcome.html', {
+        'username': user.fullname,
+    })
+        
+        send_email(user.email, html_message, mail_subject)
+
+        mail_subject = "account creation"
+        html_message = render_to_string('account_creation.html', {
+        'name': user.fullname,   
+        'username':user.username,
+        'phone': data['phone'],
+        'password': password
+    })
+        
+        send_email(user.email, html_message, mail_subject)
+
+        
+
+        return Response({"message": "User and Driver created successfully!"})

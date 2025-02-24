@@ -14,7 +14,7 @@ router.register(r'tags', TagViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('register/', RegisterForEventAPI.as_view(), name='register'),
+    path('register-for-event/', RegisterForEventAPI.as_view(), name='register-for-event'),
     path('check-in/', CheckInAPI.as_view(), name='check-in'),
     path('bulk-create-tickets/', BulkTicketCreateView.as_view({'post': 'create'})),
 ]

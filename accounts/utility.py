@@ -1,5 +1,6 @@
 import random
-from django.core.mail import send_mail
+import string
+from django.core.mail import send_mail, EmailMessage
 from django.conf import settings
 from decouple import config
 from twilio.rest import Client
@@ -24,3 +25,25 @@ def send_otp_sms(phone_number, otp):
         to=phone_number
     )
     return message.sid
+
+
+def generate_random_string(length=10):
+    characters = string.ascii_letters + string.digits  # A-Z, a-z, 0-9
+    random_string = ''.join(random.choices(characters, k=length))
+    return random_string
+
+# The send email function
+def send_email(email, html_message, mail_subject,):
+    try:
+        email = EmailMessage(
+            mail_subject,
+            html_message,
+            to=[email]
+        )
+        email.content_subtype = "html"
+        email.send()
+        return True
+    except Exception as e:
+        print(f"Email sending failed: {e}")
+        return False
+    

@@ -6,7 +6,7 @@ from rest_framework.decorators import action
 from django.core.mail import EmailMessage
 from django.conf import settings
 from django.template.loader import render_to_string
-from .mail import send_booking_email
+from .utils.mail import send_booking_email
 from .models import Ticket, EventTicket, AccommodationTicket, ParkingTicket, Reservation, Tag, Seat, CheckIn
 from . import serializers
 from .utils.qr_code import generate_qr_code
@@ -115,7 +115,7 @@ class ParkingTicketViewSet(viewsets.ModelViewSet):
         return super().create(request, *args, **kwargs)
 
 class RegisterForEventAPI(APIView):
-    permission_classes = []
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         user = request.user
@@ -139,7 +139,7 @@ class RegisterForEventAPI(APIView):
             return Response({"error": "Event not found."}, status=404)
 
 class CheckInAPI(APIView):
-    permission_classes = []
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         ticket_id = request.data.get('ticket_id')

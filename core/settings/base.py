@@ -13,10 +13,10 @@ SECRET_KEY = config('SECRET_KEY')
 AUTH_USER_MODEL = 'accounts.Account'
 
 # Debug
-DEBUG = False
+DEBUG = True
 
 # Allowed Hosts
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['127.0.0.1']
 
 # Email
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # For development
@@ -28,6 +28,14 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD') 
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 
+
+# KUDA
+SECRET_KEY = config('SECRET_KEY')
+PAYSTACK_SECRET_KEY = config('PAYSTACK_SECRET_KEY')
+KUDA_KEY = config('KUDA_KEY')
+KUDA_TEST = config('KUDA_TEST')
+KUDA_EMAIL = config('KUDA_EMAIL')
+BASE_URL = config('base_url')
 
 # Installed Apps
 INSTALLED_APPS = [
@@ -67,8 +75,12 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+        # 'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',
     ],
+    'DEFAULT_RENDERER_CLASSES': [
+      'rest_framework.renderers.JSONRenderer',   #This is to remove the usual django render template
+    ]
 }
 
 SIMPLE_JWT = {
@@ -149,7 +161,7 @@ DATABASES = {
     }
 }
 
-DATABASES['default'] = dj_database_url.parse(config('External_Database_URL'))
+# DATABASES['default'] = dj_database_url.parse(config('External_Database_URL'))
 
 # Password Validators
 AUTH_PASSWORD_VALIDATORS = [

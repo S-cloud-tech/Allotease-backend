@@ -1,8 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django_resized import ResizedImageField
-from wallet.models import Wallet
-import uuid
+from wallet.models import Virtual_accounts
 
 
 # This is the folder where profile images are stored
@@ -12,8 +11,7 @@ def upload_location(instance, filename):
     )
     return file_path
 
-
-class AccountManager(BaseUserManager):
+class AccountManager(BaseUserManager): 
     def create_user(self, email, password=None):
         if email is None:
             raise TypeError('User should have an Email')
@@ -27,11 +25,7 @@ class AccountManager(BaseUserManager):
         if password is None:
             raise TypeError('Password should not be empty')
         if email is None:
-<<<<<<< HEAD
-            raise TypeError('User should have a Username')
-=======
             raise TypeError('User should have an email')
->>>>>>> 5e1d59cefb2a91bc494d515cc2450e8a9b51980b
         
         user = self.create_user(email, password)
         user.is_superuser = True
@@ -93,19 +87,10 @@ class Merchant(models.Model):
 
 
     user = models.OneToOneField(Account, on_delete=models.CASCADE, null=True)
-    wallet = models.OneToOneField(Wallet, on_delete=models.CASCADE, null=True)
+    wallet = models.OneToOneField(Virtual_accounts, on_delete=models.CASCADE, null=True)
     active          = models.BooleanField(default=True)
     is_verified     = models.BooleanField(default=False)
     is_online       = models.BooleanField(default=False)
-<<<<<<< HEAD
     completed_tickets = models.IntegerField(default = 0, null=True, blank = True)
     cancelled_tickets = models.IntegerField(default = 0, null=True, blank = True)
     total_created_tickets     = models.IntegerField(default = 0, null=True, blank = True)
-=======
-    completed_events = models.IntegerField(default = 0, null=True, blank = True)
-    cancelled_events = models.IntegerField(default = 0, null=True, blank = True)
-    total_events     = models.IntegerField(default = 0, null=True, blank = True)
-
-    def _str_(self):
-        return self.user
->>>>>>> 5e1d59cefb2a91bc494d515cc2450e8a9b51980b

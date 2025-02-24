@@ -35,6 +35,23 @@ class Ticket(models.Model):
     def tickets_remaining(self):
         return self.total_tickets - self.tickets_reserved()
 
+# Seat model
+class Seat(models.Model):
+    # ticket = models.ForeignKey(EventTicket, on_delete=models.CASCADE, related_name="seats", null=True)
+    row = models.CharField(max_length=10, null=True)
+    seat_number = models.CharField(max_length=20)
+    is_booked = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Seat {self.seat_number} ({'Reserved' if self.is_booked else 'Available'})"
+
+# Tag model
+class Tag(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
+
 # Event-specific Information
 class EventTicket(Ticket):
     LIVE = 'LIVE'
@@ -70,7 +87,7 @@ class EventTicket(Ticket):
     agenda = models.JSONField(default=list)  # Added field for agenda and time
     tags = models.ManyToManyField('Tag', blank=True, related_name='event_tickets')
     # seat_number = models.ManyToManyField('Seat', blank=True, related_name='event_seats')
-    seat = models.OneToOneField('Seat', on_delete=models.SET_NULL, null=True, blank=True)
+    seat = models.OneToOneField(Seat, on_delete=models.SET_NULL, null=True, blank=True)
     qr_code = models.ImageField(upload_to='qr_codes/', null=True, blank=True)
     start_date = models.DateTimeField(null=True)
     end_date = models.DateTimeField(null=True)
@@ -90,14 +107,6 @@ class EventTicket(Ticket):
                 Seat.objects.create(ticket=self, seat_number=f"Seat-{i}")
     
 
-class Seat(models.Model):
-    ticket = models.ForeignKey(EventTicket, on_delete=models.CASCADE, related_name="seats", null=True)
-    row = models.CharField(max_length=10, null=True)
-    seat_number = models.CharField(max_length=20)
-    is_booked = models.BooleanField(default=False)
-
-    def __str__(self):
-        return f"Seat {self.seat_number} ({'Reserved' if self.is_booked else 'Available'})"
 
 
 # Accommodation-specific Information
@@ -129,12 +138,6 @@ class CheckIn(models.Model):
     ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE)
     check_in_time =  models.DateTimeField(auto_now_add=True)
 
-
-class Tag(models.Model):
-    name = models.CharField(max_length=50, unique=True)
-
-    def __str__(self):
-        return self.name
 
 class Reservation(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE)

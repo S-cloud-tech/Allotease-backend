@@ -2,7 +2,7 @@ from django.db.models import Sum
 from django.conf import settings
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
-from .models import Wallet, WalletTransaction
+from .models import Virtual_accounts, Transactions
 import requests
 from accounts.models import Account
 
@@ -10,12 +10,12 @@ class WalletSerializer(serializers.ModelSerializer):
     balance = serializers.SerializerMethodField()
 
     def get_balance(self, obj):
-        bal = WalletTransaction.objects.filter(
+        bal = Transactions.objects.filter(
             wallet=obj, status="success").aaggregate(Sum('amount'))['amount_sum']
         return bal
     
     class Meta:
-        model = Wallet
+        model = Virtual_accounts
         fields = ['id', 'currency', 'balance']
 
 def is_amount(value):
@@ -34,7 +34,7 @@ class DepositSerializer(serializers.Serializer):
 
     def save(self):
         user = self.context['request'].user
-        wallet = Wallet.objects.get(user=user)
+        wallet = Virtual_accounts.objects.get(user=user)
         data = self.validate_data
         url = 'https://api.paystack.co/transaction/initialize'
         headers = {

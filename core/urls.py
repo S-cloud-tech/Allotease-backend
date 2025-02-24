@@ -36,17 +36,12 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
-    path('swagger', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    path('', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('admin/', admin.site.urls),
-<<<<<<< HEAD
-    path('', include('main.urls')),
-    path('account/', include('accounts.urls'))
-=======
-    path('socials/', include('allauth.urls')),
     path('main/', include('main.urls')),
+    path('allauth/', include('allauth.urls')),
     path('accounts/', include('accounts.urls')),
     path('wallet/', include('wallet.urls')),
->>>>>>> 5e1d59cefb2a91bc494d515cc2450e8a9b51980b
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
