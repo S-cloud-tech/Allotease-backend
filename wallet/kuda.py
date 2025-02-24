@@ -7,11 +7,11 @@ class Kuda_model:
     if settings.KUDA_TEST == "True":
         KUDA_SECRET_KEY = settings.KUDA_KEY
         KUDA_EMAIL = settings.KUDA_EMAIL
-        base_url = settings.BASE_URL
+        base_url = settings.KUDA_BASE_URL
     else:
         KUDA_SECRET_KEY = settings.KUDA_KEY
         KUDA_EMAIL = settings.KUDA_EMAIL
-        base_url = settings.BASE_URL
+        base_url = settings.KUDA_BASE_URL
 
     def get_request_ref():
         s = secrets.SystemRandom()
