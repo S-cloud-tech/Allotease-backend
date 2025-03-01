@@ -13,7 +13,7 @@ SECRET_KEY = config('SECRET_KEY')
 AUTH_USER_MODEL = 'accounts.Account'
 
 # Debug
-DEBUG = True
+DEBUG = False
 
 # Allowed Hosts
 ALLOWED_HOSTS = ['127.0.0.1', 'allotease-backend.onrender.com']
