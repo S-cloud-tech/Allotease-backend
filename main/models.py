@@ -1,7 +1,13 @@
+import os
 from django.db import models
 import uuid
 from location_field.models.plain import PlainLocationField
 from accounts.models import Account, Merchant
+
+
+
+def receipt_upload_path(instance, filename):
+    return f"receipts/{uuid.uuid4()}_{filename}"
 
 
 class Ticket(models.Model):
@@ -20,6 +26,7 @@ class Ticket(models.Model):
     city = models.CharField(max_length=255, default="")
     location = PlainLocationField(based_fields=['city'], zoom=7, default=False) # Added field for map
     total_tickets = models.PositiveIntegerField(default=1)
+    receipt = models.FileField(upload_to=receipt_upload_path, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -34,6 +41,12 @@ class Ticket(models.Model):
     
     def tickets_remaining(self):
         return self.total_tickets - self.tickets_reserved()
+    
+    def delete_old_receipt(self):
+        """Delete the old receipt file if it exists"""
+        if self.receipt:
+            if os.path.isfile(self.receipt.path):
+                os.remove(self.receipt.path)
 
 # Seat model
 class Seat(models.Model):

@@ -87,7 +87,7 @@ class Merchant(models.Model):
 
 
     user = models.OneToOneField(Account, on_delete=models.CASCADE, null=True)
-    wallet = models.OneToOneField(Virtual_accounts, on_delete=models.CASCADE, null=True)
+    wallet = models.OneToOneField(Virtual_accounts, on_delete=models.CASCADE, null=True, unique=True)
     active          = models.BooleanField(default=True)
     is_verified     = models.BooleanField(default=False)
     is_online       = models.BooleanField(default=False)

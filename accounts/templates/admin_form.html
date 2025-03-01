@@ -80,13 +80,13 @@
               formData.merchantLicenseImage || ""
             );
 
-            const response = await fetch("/accounts/memerchant/register-form/", {
+            const response = await fetch("/accounts/merchant/register-form/", {
               method: "POST",
               body: formDataCopy,
             });
 
             if (response.ok) {
-              alert("User and Driver created successfully!");
+              alert("User and Merchant created successfully!");
 
               setFormData({
                 phone: "",

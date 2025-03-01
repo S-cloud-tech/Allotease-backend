@@ -6,9 +6,9 @@ from .views import (TicketViewSet, EventTicketViewSet, AccommodationTicketViewSe
 
 router = DefaultRouter()
 router.register(r'tickets', TicketViewSet)
-router.register(r'event-tickets', EventTicketViewSet)
-router.register(r'accommodation-tickets', AccommodationTicketViewSet)
-router.register(r'parking-tickets', ParkingTicketViewSet)
+router.register(r'event', EventTicketViewSet)
+router.register(r'accommodation', AccommodationTicketViewSet)
+router.register(r'parking', ParkingTicketViewSet)
 router.register(r'reservations', ReservationViewSet)
 router.register(r'tags', TagViewSet)
 

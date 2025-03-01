@@ -184,7 +184,7 @@ class PasswordResetView(generics.GenericAPIView):
 
 
 class AccountProfileView(generics.RetrieveAPIView):
-    # serializer_class = serializers.AccountSerializer
+    serializer_class = serializers.AccountSerializer
     permission_classes = []
 
     def get(self, request):
@@ -211,7 +211,7 @@ class AccountProfileView(generics.RetrieveAPIView):
 
 class CreateMerchant(APIView):
     def get(self, request):
-        return render(request, 'driver_form.html')
+        return render(request, 'admin_form.html')
     
     def post(self, request):
 

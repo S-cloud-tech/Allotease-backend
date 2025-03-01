@@ -17,7 +17,6 @@ urlpatterns = [
 
 
     path('merchant/register-form/', CreateMerchant.as_view(), name ='register_merchant_form'),
-    # path('driver/register-form/', views.CreateDriver.as_view(), name ='save_driver_form'),
     path('profile/', AccountProfileView.as_view(), name='user_profile'),
 ]
 

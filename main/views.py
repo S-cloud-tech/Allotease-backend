@@ -1,22 +1,32 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, generics
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.core.mail import EmailMessage
+from django.shortcuts import get_object_or_404
+from django.http import FileResponse
 from django.conf import settings
 from django.template.loader import render_to_string
 from .utils.mail import send_booking_email
 from .models import Ticket, EventTicket, AccommodationTicket, ParkingTicket, Reservation, Tag, Seat, CheckIn
 from . import serializers
-from .utils.qr_code import generate_qr_code
+from .utils.qr_code import generate_qr_code, save_receipt
 from .utils.seat_assignment import assign_seat
+
+
+
+def confirm_order(request, tickect_id):
+    order = get_object_or_404(Ticket, id=tickect_id, user=request.user)
+    save_receipt(order)  # Generate and save the receipt
+    return FileResponse(order.receipt.open(), content_type='application/pdf')
+
 
 class TicketViewSet(viewsets.ModelViewSet):
     queryset = Ticket.objects.all()
     serializer_class = serializers.TicketSerializer
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
 class ReservationViewSet(viewsets.ModelViewSet):
     queryset = Reservation.objects.all()
@@ -77,7 +87,7 @@ class EventTicketViewSet(viewsets.ModelViewSet):
     queryset = EventTicket.objects.all()
     serializer_class = serializers.EventTicketSerializer
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         if request.data.get('category') == 'event':
@@ -92,7 +102,7 @@ class AccommodationTicketViewSet(viewsets.ModelViewSet):
     queryset = AccommodationTicket.objects.all()
     serializer_class = serializers.AccommodationTicketSerializer
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         if request.data.get('category') == 'accommodation':
@@ -106,7 +116,7 @@ class ParkingTicketViewSet(viewsets.ModelViewSet):
     queryset = ParkingTicket.objects.all()
     serializer_class = serializers.ParkingTicketSerializer
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         if request.data.get('category') == 'parking':
@@ -130,7 +140,7 @@ class RegisterForEventAPI(APIView):
 
             ticket = Ticket.objects.create(user=user, event=event, seat=seat)
             qr_data = f"Ticket ID: {ticket.id}, Event: {event.name}, Seat: {seat.row}-{seat.seat_number}"
-            ticket.qr_code.save(f"ticket_{ticket.id}.png", generate_qr_code(qr_data))
+            ticket.qr_code.save(f"ticket_{ticket.id}.png", generate_qr_code(qr_data)) # Generation of QR code that stores data of the event registered for
 
             serializer = serializers.TicketSerializer(ticket)
             return Response(serializer.data)

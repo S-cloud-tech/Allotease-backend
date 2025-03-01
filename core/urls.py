@@ -41,7 +41,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('main/', include('main.urls')),
     path('allauth/', include('allauth.urls')),
-    path('accounts/', include('accounts.urls')),
+    path('account/', include('accounts.urls')),
     path('wallet/', include('wallet.urls')),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
