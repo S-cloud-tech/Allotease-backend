@@ -7,8 +7,8 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         tickets = EventTicket.objects.all()
         for ticket in tickets:
-            existing_seats = ticket.seats.count()
-            if existing_seats < ticket.total_tickets:
+            existing_seats = ticket.seat
+            if existing_seats == ticket.total_tickets:
                 for i in range(existing_seats + 1, ticket.total_tickets + 1):
                     Seat.objects.create(ticket=ticket, seat_number=f"Seat-{i}")
                 self.stdout.write(f"Seats populated for ticket: {ticket.title}")

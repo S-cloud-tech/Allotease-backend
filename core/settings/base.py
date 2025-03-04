@@ -16,11 +16,12 @@ AUTH_USER_MODEL = 'accounts.Account'
 DEBUG = True
 
 # Allowed Hosts
-ALLOWED_HOSTS = ['127.0.0.1', 'allotease-backend.onrender.com']
+ALLOWED_HOSTS = ['127.0.0.1', 'allotease-backend.onrender.com',]
+CSRF_TRUSTED_ORIGINS = ['https://allotease-backend.onrender.com', ]
 
 # Email
-# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # For development
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend' # For production
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # For development
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend' # For production
 EMAIL_HOST = config('EMAIL_HOST')
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
@@ -198,3 +199,26 @@ CACHES = {
         "LOCATION": "unique-snowflake",
     }
 }
+
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": os.getenv("DJANGO_LOG_LEVEL", "INFO"),
+            "propagate": False,
+        },
+    },
+}
+

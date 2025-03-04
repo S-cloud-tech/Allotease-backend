@@ -11,7 +11,7 @@ def generate_otp():
 def send_otp_email(email, otp):
     subject = "Your OTP for Verification"
     message = f"Your OTP is {otp}. It will expire in 10 minutes."
-    from_email = settings.DEFAULT_FROM_EMAIL
+    from_email = settings.EMAIL_HOST_USER
     send_mail(subject, message, from_email, [email])
 
 def send_otp_sms(phone_number, otp):

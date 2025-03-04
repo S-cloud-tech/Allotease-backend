@@ -28,7 +28,7 @@ schema_view = get_schema_view(
         default_version='v1',
         description="API documentation for the Ticket Management system",
         terms_of_service="https://www.allotease.com/policies/terms/",
-        contact=openapi.Contact(email="dev@allotease.com"),
+        contact=openapi.Contact(email="allotease2@gmail.com"),
         license=openapi.License(name="BSD License"),
     ),
     public=True,

@@ -32,7 +32,7 @@ class ReservationViewSet(viewsets.ModelViewSet):
     queryset = Reservation.objects.all()
     serializer_class = serializers.ReservationSerializer
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     @action(detail=True, methods=['post'])
     def reserve(self, request, pk=None):
@@ -125,7 +125,7 @@ class ParkingTicketViewSet(viewsets.ModelViewSet):
         return super().create(request, *args, **kwargs)
 
 class RegisterForEventAPI(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self, request):
         user = request.user
@@ -149,7 +149,7 @@ class RegisterForEventAPI(APIView):
             return Response({"error": "Event not found."}, status=404)
 
 class CheckInAPI(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self, request):
         ticket_id = request.data.get('ticket_id')
