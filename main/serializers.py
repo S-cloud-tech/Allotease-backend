@@ -1,8 +1,9 @@
 from rest_framework import serializers
-from .models import Ticket, EventTicket, AccommodationTicket, ParkingTicket, Reservation, Tag, Seat, CheckIn
+from .models import *
 
 class TicketSerializer(serializers.ModelSerializer):
     display_price = serializers.SerializerMethodField()
+    is_sold_out = serializers.SerializerMethodField()
     class Meta:
         model = Ticket
         fields = '__all__'
@@ -14,6 +15,9 @@ class TicketSerializer(serializers.ModelSerializer):
         if data.get('location') and not data.get('city'):
             raise serializers.ValidationError("Ticket must have a location")
         return data
+    
+    def get_is_sold_out(self, obj):
+         return obj.is_sold_out()
 
 class SeatSerializer(serializers.ModelSerializer):
     class Meta:
@@ -93,7 +97,7 @@ class ParkingTicketSerializer(serializers.ModelSerializer):
 class CheckInSerialiezer(serializers.ModelSerializer):
      class Meta:
           model = CheckIn
-          fields = ['ticket', 'check_in_time']
+          fields = '__all__'
 
 class BulkTicketSerializer(serializers.Serializer):
     tickets = TicketSerializer(many=True)
@@ -116,3 +120,7 @@ class TagSerializer(serializers.ModelSerializer):
         model = Tag
         fields = '__all__'
 
+class MerchantDashboardSerializer(serializers.ModelSerializer):
+     class Meta:
+        model = MerchantDashboard
+        fields = '__all__'

@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status, generics
+from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
@@ -8,8 +8,8 @@ from django.shortcuts import get_object_or_404
 from django.http import FileResponse
 from django.conf import settings
 from django.template.loader import render_to_string
-from .utils.mail import send_booking_email
-from .models import Ticket, EventTicket, AccommodationTicket, ParkingTicket, Reservation, Tag, Seat, CheckIn
+from .utils.mail import send_booking_email, generate_shareable_links
+from .models import *
 from . import serializers
 from .utils.qr_code import generate_qr_code, save_receipt
 from .utils.seat_assignment import assign_seat
@@ -27,6 +27,17 @@ class TicketViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.TicketSerializer
 
     permission_classes = [AllowAny]
+
+    @action(detail=True, methods=['get'])
+    def check_sold_out(self, request, pk=None):
+        ticket = self.get_object()
+        return Response({"is_sold_out": ticket.is_sold_out()})
+    
+    @action(detail=True, methods=['get'])
+    def share_ticket(self, request, pk=None):
+        ticket = self.get_object()
+        shareable_link = generate_shareable_links(ticket)
+        return Response({"shareable_link": shareable_link})
 
 class ReservationViewSet(viewsets.ModelViewSet):
     queryset = Reservation.objects.all()
@@ -148,18 +159,33 @@ class RegisterForEventAPI(APIView):
         except EventTicket.DoesNotExist:
             return Response({"error": "Event not found."}, status=404)
 
-class CheckInAPI(APIView):
-    permission_classes = [AllowAny]
+# class CheckInAPI(APIView):
+#     permission_classes = [AllowAny]
 
-    def post(self, request):
-        ticket_id = request.data.get('ticket_id')
+#     def post(self, request):
+#         ticket_id = request.data.get('ticket_id')
 
-        try:
-            ticket = Ticket.objects.get(id=ticket_id)
-            CheckIn.objects.create(ticket=ticket)
-            return Response({"message": "Check-in successful."})
-        except Ticket.DoesNotExist:
-            return Response({"error": "Invalid ticket."}, status=404)
+#         try:
+#             ticket = Ticket.objects.get(id=ticket_id)
+#             CheckIn.objects.create(ticket=ticket)
+#             return Response({"message": "Check-in successful."})
+#         except Ticket.DoesNotExist:
+#             return Response({"error": "Invalid ticket."}, status=404)
+
+class CheckInViewSet(viewsets.ModelViewSet):
+    queryset = CheckIn.objects.all()
+    serializer_class = serializers.CheckInSerialiezer
+
+    @action(detail=True, methods=['post'])
+    def check_in(self, request, pk=None):
+        ticket = Ticket.objects.get(pk=pk)
+        user = request.user
+
+        if CheckIn.objects.filter(ticket=ticket, user=user).exists():
+            return Response({"error": "User has already checked in."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        check_in = CheckIn.objects.create(ticket=ticket, user=user)
+        return Response(serializers.CheckInSerialiezer(check_in).data, status=status.HTTP_201_CREATED)
 
 class BulkTicketCreateView(viewsets.ViewSet):
     def create(self, request, *args, **kwargs):
@@ -173,3 +199,13 @@ class BulkTicketCreateView(viewsets.ViewSet):
 class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = serializers.TagSerializer
+
+
+class MerchantDahboardViewSet(viewsets.ModelViewSet):
+    queryset = MerchantDashboard.objects.all()
+    serializer_class = serializers.MerchantDashboardSerializer
+
+    def retrieve(self, request, pk=None):
+        dashboard, _ = MerchantDashboard.objects.get_or_create(merchant_id=pk)
+        serializer = serializers.MerchantDashboardSerializer(dashboard)
+        return Response(serializer.data)

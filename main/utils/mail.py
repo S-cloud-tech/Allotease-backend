@@ -14,3 +14,8 @@ def send_booking_email(to_email, seat_number):
         print("Invalid header found.")
     except Exception as e:
         print(f"Error sending email: {e}")
+
+
+
+def generate_shareable_links(ticket):
+    return f"https://allotease-backend.onrender.com/main/tickets/{ticket.id}/share"

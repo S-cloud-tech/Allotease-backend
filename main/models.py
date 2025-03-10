@@ -41,12 +41,16 @@ class Ticket(models.Model):
     
     def tickets_remaining(self):
         return self.total_tickets - self.tickets_reserved()
+
+    def is_sold_out(self):
+        return self.tickets_remaining() <= 0
     
     def delete_old_receipt(self):
         """Delete the old receipt file if it exists"""
         if self.receipt:
             if os.path.isfile(self.receipt.path):
                 os.remove(self.receipt.path)
+
 
 # Seat model
 class Seat(models.Model):
@@ -93,14 +97,14 @@ class EventTicket(Ticket):
     choice = models.CharField(max_length=6, choices=EVENT_CHOICES, default=LIVE)
     has_started     = models.BooleanField(default=False)
     status = models.CharField(max_length=20, choices=STATUSES, default=NOT_STARTED)
-    user = models.ForeignKey(Account, blank=False, null=True, default=None, on_delete=models.CASCADE, related_name="regular")
-    organizer = models.ForeignKey(Merchant, null=True, blank=True, default=None, on_delete=models.CASCADE, related_name="merchant")
+    # user = models.ForeignKey(Account, blank=False, null=True, default=None, on_delete=models.CASCADE, related_name="regular")
+    # organizer = models.ForeignKey(Merchant, null=True, blank=True, default=None, on_delete=models.CASCADE, related_name="merchant")
     is_online = models.BooleanField(default=False)  # Added field for online events
     online_link = models.URLField(null=True, blank=True)  # Link for online events
     agenda = models.JSONField(default=list)  # Added field for agenda and time
     tags = models.ManyToManyField('Tag', blank=True, related_name='event_tickets')
     # seat_number = models.ManyToManyField('Seat', blank=True, related_name='event_seats')
-    seat = models.OneToOneField(Seat, on_delete=models.SET_NULL, null=True, blank=True)
+    # seat = models.OneToOneField(Seat, on_delete=models.SET_NULL, null=True, blank=True)
     qr_code = models.ImageField(upload_to='qr_codes/', null=True, blank=True)
     start_date = models.DateTimeField(null=True)
     end_date = models.DateTimeField(null=True)
@@ -149,7 +153,11 @@ class ParkingTicket(Ticket):
 
 class CheckIn(models.Model):
     ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE)
+    # user = models.ForeignKey(Account, on_delete=models.CASCADE)
     check_in_time =  models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Check-in: {self.user.username} for {self.ticket.title}"
 
 
 class Reservation(models.Model):
@@ -163,4 +171,12 @@ class Reservation(models.Model):
 
 
 
+class MerchantDashboard(models.Model):
+    merchant = models.OneToOneField(Merchant, on_delete=models.CASCADE)
+    total_tickets = models.IntegerField(default=0)
+    total_tickets_sold = models.IntegerField(default=0)
+    revenue_generated = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
+
+    def __str__(self):
+        return f"Dashboard for {self.merchant.username}"

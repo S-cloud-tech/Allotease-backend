@@ -1,7 +1,6 @@
-from rest_framework import generics, status, permissions
+from rest_framework import generics, status, permissions, viewsets
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.authtoken.models import Token
 from django.utils.timezone import now
 from django.core.cache import cache
@@ -24,7 +23,7 @@ class RegisterView(generics.GenericAPIView):
 
             user_data = serializer.data
             user = Account.objects.get(email=user_data['email'])
-            token = RefreshToken.for_user(user)
+            # token = RefreshToken.for_user(user)
 
             return Response({
                 "message": "User registered successfully. An OTP has been sent to your email for verification." # Remove in production
@@ -207,6 +206,11 @@ class AccountProfileView(generics.RetrieveAPIView):
         user = request.user
         user.delete()
         return Response({"message": "User profile deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = Account.objects.all()
+    serializer_class = serializers.AccountSerializer
 
 
 class CreateMerchant(APIView):

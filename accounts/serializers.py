@@ -126,11 +126,11 @@ class PasswordResetSerializer(serializers.Serializer):
 
 
 class AccountSerializer(serializers.ModelSerializer):
-    id = serializers.PrimaryKeyRelatedField(read_only=True)
+    # id = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Account
-        fields = ['id', 'first_name', 'last_name', 'phone_number', 'profile_image']
+        fields = ['first_name', 'last_name', 'phone_number', 'profile_image']
         read_only_fields = ['id', 'email_verified', 'phone_verified']
 
     # This is to update user details 
