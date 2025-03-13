@@ -124,8 +124,6 @@ class EventTicket(Ticket):
                 Seat.objects.create(ticket=self, seat_number=f"Seat-{i}")
     
 
-
-
 # Accommodation-specific Information
 class AccommodationTicket(Ticket):
     ACCOMMODATION_CHOICES = [
@@ -170,6 +168,22 @@ class Reservation(models.Model):
         return f"Reserved for {self.ticket.title}"
 
 
+class SeatReservation(models.Model):
+    event_ticket = models.ForeignKey(EventTicket, on_delete=models.CASCADE, related_name="reserved_seats")
+    seat_number = models.CharField(max_length=10)  # Example: A1, B2
+    user = models.ForeignKey(Account, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('event_ticket', 'seat_number')  # Prevent duplicate reservations
+
+class ParkingSlotReservation(models.Model):
+    parking_ticket = models.ForeignKey(ParkingTicket, on_delete=models.CASCADE, related_name="reserved_slots")
+    slot_number = models.CharField(max_length=10)  # Example: P1, P2
+    user = models.ForeignKey(Account, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('parking_ticket', 'slot_number')  # Prevent duplicate reservations
+
 
 class MerchantDashboard(models.Model):
     merchant = models.OneToOneField(Merchant, on_delete=models.CASCADE)
@@ -179,4 +193,11 @@ class MerchantDashboard(models.Model):
 
 
     def __str__(self):
-        return f"Dashboard for {self.merchant.username}"
+        return f"Dashboard for {self.merchant.user.username}"
+
+class DigitalIdentityVerification(models.Model):
+    user = models.OneToOneField(Account, on_delete=models.CASCADE, related_name='digital_identity')
+    is_verified = models.BooleanField(default=False)
+    verification_document = models.FileField(upload_to='verification_documents/')
+    verification_date = models.DateTimeField(null=True, blank=True)
+

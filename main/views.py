@@ -2,10 +2,12 @@ from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from django.core.mail import EmailMessage
 from django.shortcuts import get_object_or_404
 from django.http import FileResponse
+from django.utils.timezone import now
 from django.conf import settings
 from django.template.loader import render_to_string
 from .utils.mail import send_booking_email, generate_shareable_links
@@ -13,6 +15,7 @@ from .models import *
 from . import serializers
 from .utils.qr_code import generate_qr_code, save_receipt
 from .utils.seat_assignment import assign_seat
+from .utils.verification import verify_document_with_third_party
 
 
 
@@ -34,65 +37,113 @@ class TicketViewSet(viewsets.ModelViewSet):
         return Response({"is_sold_out": ticket.is_sold_out()})
     
     @action(detail=True, methods=['get'])
-    def share_ticket(self, request, pk=None):
+    def share(self, request, pk=None):
         ticket = self.get_object()
         shareable_link = generate_shareable_links(ticket)
         return Response({"shareable_link": shareable_link})
+
+# class ReservationViewSet(viewsets.ModelViewSet):
+#     queryset = Reservation.objects.all()
+#     serializer_class = serializers.ReservationSerializer
+
+#     permission_classes = [AllowAny]
+
+#     @action(detail=True, methods=['post'])
+#     def reserve(self, request, pk=None):
+#         ticket = Ticket.objects.get(pk=pk)
+#         # user = request.user
+#         seat_id = request.data.get('seat_id')
+
+#         if Reservation.objects.filter(ticket=ticket).exists():
+#             return Response({"error": "You have already reserved this ticket."}, status=status.HTTP_400_BAD_REQUEST)
+        
+#         if ticket.tickets_remaining() <= 0:
+#             return Response({"error": "No tickets remaining."}, status=status.HTTP_400_BAD_REQUEST)
+        
+#         seat_number = request.data.get('seat_number')
+#         if isinstance(ticket, EventTicket) and not seat_number:
+#             return Response({"error": "Seat number is required for event reservations."}, status=status.HTTP_400_BAD_REQUEST)
+        
+#         # Check if the seat is valid and available
+#         try:
+#             seat = Seat.objects.get(id=seat_id, ticket=ticket, is_reserved=False)
+#         except Seat.DoesNotExist:
+#             return Response({"error": "Seat is either invalid or already reserved."}, status=status.HTTP_400_BAD_REQUEST)
+
+#         # Reserve the seat
+#         seat.is_reserved = True
+#         seat.save()
+
+#         reservation = Reservation.objects.create(ticket=ticket)
+#         return Response(serializers.ReservationSerializer(reservation).data, status=status.HTTP_201_CREATED)
+
+#     @action(detail=True, methods=['post'])
+#     def purchase(self, request, pk=None):
+#         ticket = Ticket.objects.get(pk=pk)
+#         user = request.user
+
+#         reservation, created = Reservation.objects.get_or_create(ticket=ticket, user=user)
+#         reservation.is_paid = True
+#         reservation.save()
+
+#         subject = f"Ticket Purchase Confirmation: {ticket.title}"
+#         html_content = render_to_string('email_templates/ticket_confirmation.html', {
+#             'user': user,
+#             'ticket': ticket,
+#         })
+#         email = EmailMessage(subject, html_content, settings.DEFAULT_FROM_EMAIL, [user.email])
+#         email.content_subtype = 'html'  # Use HTML content
+#         email.send()
+
+#         return Response(serializers.ReservationSerializer(reservation).data, status=status.HTTP_200_OK)
 
 class ReservationViewSet(viewsets.ModelViewSet):
     queryset = Reservation.objects.all()
     serializer_class = serializers.ReservationSerializer
 
-    permission_classes = [AllowAny]
+    @action(detail=True, methods=['post'])
+    def reserve_seat(self, request, pk=None):
+        """Reserve a seat for an event ticket."""
+        event_ticket = EventTicket.objects.get(pk=pk)
+        seat_number = request.data.get('seat_number')
+        user = request.user
+
+        if SeatReservation.objects.filter(event_ticket=event_ticket, seat_number=seat_number).exists():
+            return Response({"error": "Seat already reserved."}, status=status.HTTP_400_BAD_REQUEST)
+
+        seat_reservation = SeatReservation.objects.create(event_ticket=event_ticket, seat_number=seat_number, user=user)
+        return Response(serializers.SeatReservationSerializer(seat_reservation).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'])
-    def reserve(self, request, pk=None):
-        ticket = Ticket.objects.get(pk=pk)
+    def reserve_parking_slot(self, request, pk=None):
+        """Reserve a parking slot."""
+        parking_ticket = ParkingTicket.objects.get(pk=pk)
+        slot_number = request.data.get('slot_number')
         user = request.user
-        seat_id = request.data.get('seat_id')
 
-        if Reservation.objects.filter(ticket=ticket, user=user).exists():
-            return Response({"error": "You have already reserved this ticket."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        if ticket.tickets_remaining() <= 0:
-            return Response({"error": "No tickets remaining."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        seat_number = request.data.get('seat_number')
-        if isinstance(ticket, EventTicket) and not seat_number:
-            return Response({"error": "Seat number is required for event reservations."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Check if the seat is valid and available
-        try:
-            seat = Seat.objects.get(id=seat_id, ticket=ticket, is_reserved=False)
-        except Seat.DoesNotExist:
-            return Response({"error": "Seat is either invalid or already reserved."}, status=status.HTTP_400_BAD_REQUEST)
+        if ParkingSlotReservation.objects.filter(parking_ticket=parking_ticket, slot_number=slot_number).exists():
+            return Response({"error": "Parking slot already reserved."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Reserve the seat
-        seat.is_reserved = True
-        seat.save()
-
-        reservation = Reservation.objects.create(ticket=ticket, user=user)
-        return Response(serializers.ReservationSerializer(reservation).data, status=status.HTTP_201_CREATED)
+        slot_reservation = ParkingSlotReservation.objects.create(parking_ticket=parking_ticket, slot_number=slot_number, user=user)
+        return Response(serializers.ParkingSlotReservationSerializer(slot_reservation).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'])
     def purchase(self, request, pk=None):
-        ticket = Ticket.objects.get(pk=pk)
-        user = request.user
-
-        reservation, created = Reservation.objects.get_or_create(ticket=ticket, user=user)
+        """Complete a ticket purchase and send an email confirmation."""
+        reservation = self.get_object()
         reservation.is_paid = True
         reservation.save()
 
-        subject = f"Ticket Purchase Confirmation: {ticket.title}"
-        html_content = render_to_string('email_templates/ticket_confirmation.html', {
-            'user': user,
-            'ticket': ticket,
-        })
-        email = EmailMessage(subject, html_content, settings.DEFAULT_FROM_EMAIL, [user.email])
-        email.content_subtype = 'html'  # Use HTML content
-        email.send()
+        # Send email confirmation
+        send_mail(
+            "Ticket Purchase Confirmation",
+            f"Dear {reservation.user.username}, your ticket for {reservation.ticket.title} has been successfully purchased!",
+            settings.DEFAULT_FROM_EMAIL,
+            [reservation.user.email],
+            fail_silently=False,
+        )
 
-        return Response(serializers.ReservationSerializer(reservation).data, status=status.HTTP_200_OK)
+        return Response(ReservationSerializer(reservation).data, status=status.HTTP_200_OK)
 
 class EventTicketViewSet(viewsets.ModelViewSet):
     queryset = EventTicket.objects.all()
@@ -209,3 +260,31 @@ class MerchantDahboardViewSet(viewsets.ModelViewSet):
         dashboard, _ = MerchantDashboard.objects.get_or_create(merchant_id=pk)
         serializer = serializers.MerchantDashboardSerializer(dashboard)
         return Response(serializer.data)
+
+
+class UploadVerificationDocumentView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        user = request.user
+        file = request.FILES.get("document")
+
+        if not file:
+            raise ValidationError("Verification document is required.")
+
+        digital_identity, created = DigitalIdentityVerification.objects.get_or_create(user=user)
+        digital_identity.verification_document = file
+        digital_identity.save()
+
+        # Simulate verification with a third-party service
+        document_path = digital_identity.verification_document.path
+        is_verified = verify_document_with_third_party(document_path)
+
+        if is_verified:
+            digital_identity.is_verified = True
+            digital_identity.verification_date = now()
+            digital_identity.save()
+            return Response({"detail": "Document verification successful."})
+
+        return Response({"detail": "Document verification failed."}, status=400)
+

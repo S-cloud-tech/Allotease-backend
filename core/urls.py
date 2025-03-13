@@ -21,7 +21,7 @@ from django.conf.urls.static import static
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
-from accounts import router as users_api_router
+
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -36,20 +36,15 @@ schema_view = get_schema_view(
     permission_classes=(permissions.AllowAny,),
 )
 
-api_url_patterns = [
-    path(r'accounts/', include(users_api_router.router.urls))
-]
-
 
 urlpatterns = [
     path('', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    # path('api/api.json/', schema_view.without_ui(cache_timeout=0), name='schema-swagger-ui'),
+    path('api/api.json/', schema_view.without_ui(cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('admin/', admin.site.urls),
     path('main/', include('main.urls')),
     re_path(r'^auth/', include('drf_social_oauth2.urls', namespace='drf')),
     path('account/', include('accounts.urls')),
     path('wallet/', include('wallet.urls')),
-    path('api/', include(api_url_patterns)),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

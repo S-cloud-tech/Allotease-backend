@@ -18,4 +18,5 @@ def send_booking_email(to_email, seat_number):
 
 
 def generate_shareable_links(ticket):
-    return f"https://allotease-backend.onrender.com/main/tickets/{ticket.id}/share"
+    base_url = "http://127.0.0.1:8000/main/tickets" #Change in Production  
+    return f"{base_url}/{ticket.id}/"

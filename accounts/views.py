@@ -50,7 +50,6 @@ class LoginView(generics.GenericAPIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-
 # Delete User Account
 class DeleteUser(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]

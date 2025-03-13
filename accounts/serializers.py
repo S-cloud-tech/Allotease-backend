@@ -130,20 +130,22 @@ class AccountSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Account
-        fields = ['first_name', 'last_name', 'phone_number', 'profile_image']
+        fields = ['email','username','first_name', 'last_name', 'phone_number', 'profile_image']
         read_only_fields = ['id', 'email_verified', 'phone_verified']
 
     # This is to update user details 
     def update(self, instance,validated_data):
 
+        if self.validated_data.get('username'):
+            instance.username=self.validated_data['username']
         if self.validated_data.get('first_name'):
             instance.first_name=self.validated_data['first_name']
         if self.validated_data.get('last_name'):
             instance.last_name=self.validated_data['last_name']
         if self.validated_data.get('phone_number'):
             instance.phone=self.validated_data['phone_number']
-        # if self.validated_data.get('email'):
-        #     instance.email=self.validated_data['email']
+        if self.validated_data.get('email'):
+            instance.email=self.validated_data['email']
         if self.validated_data.get('profile_image'):
             instance.profile_image = self.validated_data['profile_image']
         

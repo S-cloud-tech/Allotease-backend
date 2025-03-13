@@ -115,6 +115,16 @@ class ReservationSerializer(serializers.Serializer):
           model = Reservation
           fields = '__all__'
 
+class SeatReservationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SeatReservation
+        fields = '__all__'
+
+class ParkingSlotReservationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ParkingSlotReservation
+        fields = '__all__'
+
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
@@ -124,3 +134,4 @@ class MerchantDashboardSerializer(serializers.ModelSerializer):
      class Meta:
         model = MerchantDashboard
         fields = '__all__'
+

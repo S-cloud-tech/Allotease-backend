@@ -15,6 +15,7 @@ router.register(r'check-ins', CheckInViewSet)
 urlpatterns = [
     path('', include(router.urls)),
     path('register-for-event/', RegisterForEventAPI.as_view(), name='register-for-event'),
+    path('upload-documents/', UploadVerificationDocumentView.as_view(), name='upload-documents'),
     # path('check-in/', CheckInAPI.as_view(), name='check-in'),
     path('bulk-create-tickets/', BulkTicketCreateView.as_view({'post': 'create'})),
 ]

@@ -36,7 +36,7 @@ class AccountManager(BaseUserManager):
 
 class Account(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(verbose_name="email", max_length=60, unique=True, db_index=True)
-    username = models.CharField(max_length=30, null=True, blank=True)
+    username = models.CharField(max_length=30, null=True, blank=True, unique=True)
     date_joined = models.DateTimeField(verbose_name="date joined",   auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     last_login = models.DateTimeField(verbose_name="last login", auto_now=True)
