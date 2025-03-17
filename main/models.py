@@ -1,9 +1,12 @@
 import os
 from django.db import models
+from django.utils.timezone import now
+from django.conf import settings
 import uuid
 from location_field.models.plain import PlainLocationField
 from accounts.models import Account, Merchant
-
+from paystackapi.transaction import Transaction
+from .utils.mail import send_refund_email
 
 
 def receipt_upload_path(instance, filename):
@@ -16,6 +19,14 @@ class Ticket(models.Model):
         ('accommodation', 'Accommodation'),
         ('parking', 'Parking'),
     ]
+
+    STATUS_CHOICES = [
+        ('', ''),
+        ('pending', 'Pending'),
+        ('paid', 'Paid'),
+        ('cancelled', 'Cancelled'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
     title = models.CharField(max_length=255)
@@ -26,12 +37,20 @@ class Ticket(models.Model):
     city = models.CharField(max_length=255, default="")
     location = PlainLocationField(based_fields=['city'], zoom=7, default=False) # Added field for map
     total_tickets = models.PositiveIntegerField(default=1)
+    payment_status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     receipt = models.FileField(upload_to=receipt_upload_path, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.category} - {self.title}"
+    
+    def save(self, *args, **kwargs):
+        if not self.ticket_code:
+            self.ticket_code = self.generate_ticket_code()
+        if self.status == 'paid':  # Generate QR only after payment
+            self.generate_qr_code()
+        super().save(*args, **kwargs)
     
     def display_price(self):
         return "Free" if self.is_free else f"${self.price}"
@@ -50,7 +69,6 @@ class Ticket(models.Model):
         if self.receipt:
             if os.path.isfile(self.receipt.path):
                 os.remove(self.receipt.path)
-
 
 # Seat model
 class Seat(models.Model):
@@ -123,7 +141,6 @@ class EventTicket(Ticket):
             for i in range(1, self.total_tickets + 1):
                 Seat.objects.create(ticket=self, seat_number=f"Seat-{i}")
     
-
 # Accommodation-specific Information
 class AccommodationTicket(Ticket):
     ACCOMMODATION_CHOICES = [
@@ -148,7 +165,7 @@ class ParkingTicket(Ticket):
     def __str__(self):
         return f"{self.id}"
 
-
+# CheckIn
 class CheckIn(models.Model):
     ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE)
     # user = models.ForeignKey(Account, on_delete=models.CASCADE)
@@ -200,4 +217,49 @@ class DigitalIdentityVerification(models.Model):
     is_verified = models.BooleanField(default=False)
     verification_document = models.FileField(upload_to='verification_documents/')
     verification_date = models.DateTimeField(null=True, blank=True)
+
+class Refund(models.Model):
+    user = models.ForeignKey(Account, on_delete=models.CASCADE)
+    ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE)
+    reason = models.TextField()
+    status = models.CharField(
+        max_length=10, choices=[("pending", "Pending"), ("approved", "Approved"), ("denied", "Denied")], default="pending"
+    )
+    requested_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    def approve_refund(self):
+        """Mark refund as approved and process refund"""
+        self.status = "approved"
+        self.processed_at = now()
+        self.ticket.status = "available"  # Release the ticket
+        self.ticket.save()
+        self.save()
+
+    def deny_refund(self):
+        """Deny the refund request"""
+        self.status = "denied"
+        self.processed_at = now()
+        self.save()
+
+        # Send email to user
+        subject = "Refund Denied ❌"
+        message = f"Hello {self.user.username}, your refund request for ticket {self.ticket.ticket_code} has been denied."
+        send_refund_email(self.user.email, subject, message)
+
+    def process_paystack_refund(self):
+        """Trigger a refund request to Paystack"""
+        transaction = Transaction.list(reference=self.ticket.ticket_code)
+        if transaction.get("status") and transaction["data"]:
+            trans_id = transaction["data"][0]["id"]
+            response = Transaction.refund(trans_id, settings.PAYSTACK_SECRET_KEY)
+
+            if response["status"]:
+                self.status = "approved"
+                self.processed_at = now()
+                self.ticket.status = "available"  # Reset the ticket for resale
+                self.ticket.save()
+                self.save()
+                return True
+        return False
 

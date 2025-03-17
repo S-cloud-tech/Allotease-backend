@@ -19,6 +19,12 @@ class TicketSerializer(serializers.ModelSerializer):
     def get_is_sold_out(self, obj):
          return obj.is_sold_out()
 
+class TicketPurchaseSerializer(serializers.ModelSerializer):
+     
+    class Meta:
+        model = Ticket
+        fields = ['category', 'price']
+
 class SeatSerializer(serializers.ModelSerializer):
     class Meta:
         model = Seat
@@ -134,4 +140,12 @@ class MerchantDashboardSerializer(serializers.ModelSerializer):
      class Meta:
         model = MerchantDashboard
         fields = '__all__'
+
+class RefundSerializer(serializers.ModelSerializer):
+    ticket_code = serializers.CharField(source="ticket.ticket_code", read_only=True)
+    event_name = serializers.CharField(source="ticket.event.name", read_only=True)
+
+    class Meta:
+        model = Refund
+        fields = ["id", "ticket_code", "event_name", "reason", "status", "requested_at", "processed_at"]
 

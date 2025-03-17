@@ -10,12 +10,16 @@ from django.http import FileResponse
 from django.utils.timezone import now
 from django.conf import settings
 from django.template.loader import render_to_string
+from django.db.models import Count, Sum
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from .utils.mail import send_booking_email, generate_shareable_links
 from .models import *
 from . import serializers
 from .utils.qr_code import generate_qr_code, save_receipt
 from .utils.seat_assignment import assign_seat
 from .utils.verification import verify_document_with_third_party
+import json
 
 
 
@@ -31,8 +35,40 @@ class TicketViewSet(viewsets.ModelViewSet):
 
     permission_classes = [AllowAny]
 
+    @action(detail=False, methods=['post'], url_path='purchase')
+    def purchase_ticket(self, request):
+        """
+        API endpoint to purchase a ticket.
+        Usage: POST /main/tickets/purchase/
+        """
+        serializer = serializers.TicketPurchaseSerializer(data=request.data)
+        if serializer.is_valid():
+            ticket = serializer.save(user=request.user, status='')
+            return Response({
+                'message': 'Ticket created. Proceed to payment.',
+                'ticket_id': ticket.id,
+                'amount': ticket.price
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['post'], url_path='confirm-payment')
+    def confirm_payment(self, request, pk=None):
+        """
+        API endpoint to confirm payment and generate a QR code.
+        Usage: POST /main/tickets/{ticket_id}/confirm-payment/
+        """
+        ticket = get_object_or_404(Ticket, pk=pk, user=request.user, status='pending')
+        ticket.status = 'paid'
+        ticket.save()
+        self.send_qr_code_email(ticket)
+        return Response({'message': 'Payment confirmed. QR code sent to email.'}, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=['get'])
     def check_sold_out(self, request, pk=None):
+        """
+        API endpoint to check if ticket is sold out.
+        Usage: POST /main/tickets/{ticket_id}/check-sold-out/
+        """
         ticket = self.get_object()
         return Response({"is_sold_out": ticket.is_sold_out()})
     
@@ -41,6 +77,32 @@ class TicketViewSet(viewsets.ModelViewSet):
         ticket = self.get_object()
         shareable_link = generate_shareable_links(ticket)
         return Response({"shareable_link": shareable_link})
+
+    @action(detail=True, methods=['get'], url_path='validate')
+    def validate(self, request, pk=None):
+        """
+        API endpoint to validate ticket.
+        Usage: POST /main/tickets/{ticket_id}/validate/
+        """
+        ticket = get_object_or_404(Ticket, id=pk)
+        serializer = self.get_serializer(ticket)
+        return Response({'message': 'Ticket is valid', 'ticket': serializer.data})
+
+    def send_qr_code_email(self, ticket):
+        """Send an email with the ticket QR code attached."""
+        subject = f"Your Ticket for {ticket.event_name}"
+        message = f"Hello,\n\nYour ticket has been generated successfully. Please find your QR code attached.\n\nTicket Code: {ticket.ticket_code}\n\nThank you for your purchase!"
+        recipient_email = ticket.user.email
+        
+        if ticket.qr_code:
+            email = EmailMessage(subject, message, settings.DEFAULT_FROM_EMAIL, [recipient_email])
+            qr_code_path = ticket.qr_code.path
+
+            # Attach the QR code
+            if os.path.exists(qr_code_path):
+                email.attach_file(qr_code_path)
+
+            email.send()
 
 # class ReservationViewSet(viewsets.ModelViewSet):
 #     queryset = Reservation.objects.all()
@@ -158,6 +220,20 @@ class EventTicketViewSet(viewsets.ModelViewSet):
             if request.data.get('agenda') and not isinstance(request.data['agenda'], list):
                 return Response({"error": "Agenda must be a list of dictionaries with agenda details and times."}, status=status.HTTP_400_BAD_REQUEST)
         return super().create(request, *args, **kwargs)
+    
+
+    @action(detail=False, methods=['get'], url_path="analytics")
+    def event_analytics(self, request):
+        """
+        API endpoint to generate analytics report.
+        Usage: POST /main/events/analytics/
+        """
+        events = EventTicket.objects.annotate(
+            total_tickets_sold=Count('ticket', filter=models.Q(ticket__status='paid')),
+            total_revenue=Sum('ticket__price', filter=models.Q(ticket__status='paid'))
+        ).values('name', 'date', 'total_tickets_sold', 'total_revenue')
+
+        return Response({"events": list(events)}, status=200)
     
 
 class AccommodationTicketViewSet(viewsets.ModelViewSet):
@@ -287,4 +363,64 @@ class UploadVerificationDocumentView(APIView):
             return Response({"detail": "Document verification successful."})
 
         return Response({"detail": "Document verification failed."}, status=400)
+
+class RefundViewSet(viewsets.ReadOnlyModelViewSet):
+    """Viewset for users to track their refund requests"""
+    queryset = Refund.objects.all()
+    serializer_class = serializers.RefundSerializer
+    permission_classes = [AllowAny]
+
+    # To process paystack refund
+@action(detail=True, methods=["post"], url_path="process-refund")
+def process_refund(self, request, pk=None):
+    """Admin approves or denies a refund request"""
+    refund = Refund.objects.get(ticket__id=pk)
+    action = request.data.get("action")
+
+    if action == "approve":
+        if refund.process_paystack_refund():
+            return Response({"message": "Refund approved and processed via Paystack"}, status=status.HTTP_200_OK)
+        return Response({"error": "Paystack refund failed"}, status=status.HTTP_400_BAD_REQUEST)
+
+    elif action == "deny":
+        refund.status = "denied"
+        refund.processed_at = now()
+        refund.save()
+        return Response({"message": "Refund denied"}, status=status.HTTP_200_OK)
+
+    return Response({"error": "Invalid action"}, status=status.HTTP_400_BAD_REQUEST)
+
+# Paystack Webhook
+@csrf_exempt
+def paystack_webhook(request):
+    """Handle Paystack refund webhook events"""
+    try:
+        payload = json.loads(request.body)
+        event = payload.get("event")
+
+        if event == "refund.successful":
+            paystack_reference = payload["data"]["transaction_reference"]
+
+            # Find matching refund request
+            try:
+                ticket = Ticket.objects.get(ticket_code=paystack_reference)
+                refund = Refund.objects.get(ticket=ticket, status="pending")
+                
+                # Mark refund as processed
+                refund.status = "approved"
+                refund.processed_at = now()
+                refund.ticket.status = "available"
+                refund.ticket.save()
+                refund.save()
+
+                return JsonResponse({"message": "Refund processed successfully"}, status=200)
+            except (Ticket.DoesNotExist, Refund.DoesNotExist):
+                return JsonResponse({"error": "No matching refund request found"}, status=404)
+
+        return JsonResponse({"message": "Event ignored"}, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
 

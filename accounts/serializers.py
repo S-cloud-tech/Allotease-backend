@@ -130,7 +130,7 @@ class AccountSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Account
-        fields = ['email','username','first_name', 'last_name', 'phone_number', 'profile_image']
+        fields = ['id', 'email','username','first_name', 'last_name', 'phone_number', 'profile_image']
         read_only_fields = ['id', 'email_verified', 'phone_verified']
 
     # This is to update user details 
