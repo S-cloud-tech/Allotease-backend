@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     # Authentication
     'rest_framework',
     'rest_framework.authtoken',
+    'rest_framework_simplejwt',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
@@ -73,6 +74,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         # 'rest_framework.permissions.IsAuthenticated',
@@ -81,6 +83,11 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
       'rest_framework.renderers.JSONRenderer',   #This is to remove the usual django render template
     ]
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
 
 AUTHENTICATION_BACKENDS = [
@@ -154,7 +161,7 @@ DATABASES = {
     }
 }
 
-# DATABASES['default'] = dj_database_url.parse(config('External_Database_URL'))
+DATABASES['default'] = dj_database_url.parse(config('External_Database_URL'))
 
 # Password Validators
 AUTH_PASSWORD_VALIDATORS = [

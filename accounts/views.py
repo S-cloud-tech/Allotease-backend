@@ -1,4 +1,5 @@
 from rest_framework import generics, status, permissions, viewsets
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
@@ -30,6 +31,33 @@ class RegisterView(generics.GenericAPIView):
             }, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class RegularUserSignupView(APIView):
+    serializer_class = serializers.RegularUserSignupSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        user = request.data
+        serializer = self.serializer_class(data=user)
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response({"message": "Regular user registered successfully!"}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class MerchantSignupView(APIView):
+    serializer_class = serializers.MerchantSignupSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        user = request.data
+        serializer = self.serializer_class(data=user)
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response({"message": "Merchant registered successfully!"}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 # Login Users
 class LoginView(generics.GenericAPIView):
