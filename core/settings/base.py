@@ -154,7 +154,7 @@ DATABASES = {
     }
 }
 
-# DATABASES['default'] = dj_database_url.parse(config('External_Database_URL'))
+DATABASES['default'] = dj_database_url.parse(config('External_Database_URL'))
 
 # Password Validators
 AUTH_PASSWORD_VALIDATORS = [
