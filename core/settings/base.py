@@ -16,8 +16,8 @@ AUTH_USER_MODEL = 'accounts.Account'
 DEBUG = False
 
 # Allowed Hosts
-ALLOWED_HOSTS = ['127.0.0.1', 'allotease-backend.onrender.com']
-CSRF_TRUSTED_ORIGINS = ['https://allotease-backend.onrender.com',]
+ALLOWED_HOSTS = ['127.0.0.1', '127.0.0.1:8000', 'allotease-backend.onrender.com']
+CSRF_TRUSTED_ORIGINS = ['https://allotease-backend.onrender.com', 'http://127.0.0.1:8000']
 
 # Email
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # For development
