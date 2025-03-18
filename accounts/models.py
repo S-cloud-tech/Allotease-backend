@@ -35,8 +35,15 @@ class AccountManager(BaseUserManager):
 
 
 class Account(AbstractBaseUser, PermissionsMixin):
+    USER_TYPE_CHOICES = (
+        ('regular', 'Regular User'),
+        ('merchant', 'Merchant'),
+    )
+
     email = models.EmailField(verbose_name="email", max_length=60, unique=True, db_index=True)
     username = models.CharField(max_length=30, null=True, blank=True, unique=True)
+    user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES, default='regular')
+    business_name = models.CharField(max_length=255, blank=True, null=True)  # Only for merchants
     date_joined = models.DateTimeField(verbose_name="date joined",   auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     last_login = models.DateTimeField(verbose_name="last login", auto_now=True)

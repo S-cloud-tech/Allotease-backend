@@ -22,6 +22,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = Account.objects.create(
+            first_name = validated_data['first_name'],
+            last_name = validated_data['last_name'],
             username=validated_data['username'],
             email=validated_data['email'],
             phone_number=validated_data['phone_number'],
@@ -58,6 +60,129 @@ class RegisterSerializer(serializers.ModelSerializer):
         account.set_password(password)
         account.save()
         return account
+
+
+class RegularUserSignupSerializer(serializers.ModelSerializer):
+    password2 = serializers.CharField(style={'input_type' : 'password'}, write_only=True)
+
+    class Meta:
+        model = Account
+        fields = [
+            'email','first_name','last_name','password', 'password2', 'phone_number'
+            ]
+        extra_kwarg = {
+            'password' : {'write_only' : True}
+        }
+
+    def validate(self, attrs):
+        email = attrs.get('email', '') 
+        return attrs
+
+    def create(self, validated_data):
+        user = Account.objects.create(
+            first_name = validated_data['first_name'],
+            last_name = validated_data['last_name'],
+            username=validated_data['username'],
+            email=validated_data['email'],
+            phone_number=validated_data['phone_number'],
+        )
+        user.set_password(validated_data['password'])
+        user.save()
+
+        # Send OTPs
+        otp = generate_otp()
+        user.otp = otp
+        user.otp_created_at = now()
+        user.save()
+
+        if validated_data['email']:
+            send_otp_email(user.email, otp)
+
+        if validated_data['phone_number']:
+            send_otp_sms(user.phone_number, otp)
+        return Account.objects.create_user(**validated_data)
+    
+    def save(self):
+        password = self.validated_data['password']    
+        password2 = self.validated_data['password2']
+        
+        #Add validations before saving
+
+        if password != password2:
+            raise serializers.ValidationError({'password' : 'Passwords do not match.'})  #Make sure that passwords match
+
+        account = Account (
+            email = self.validated_data['email'],
+        )
+        
+        account.set_password(password)
+        account.save()
+        return account
+
+
+class MerchantSignupSerializer(serializers.ModelSerializer):
+    password2 = serializers.CharField(style={'input_type' : 'password'}, write_only=True)
+
+    class Meta:
+        model = Account
+        fields = [
+            'email','first_name','last_name','password', 'password2', 'phone_number', 'business_name'
+            ]
+        extra_kwarg = {
+            'password' : {'write_only' : True}
+        }
+
+    def validate(self, attrs):
+        email = attrs.get('email', '') 
+        return attrs
+    
+    def validate_business_name(self, value):
+        if not value:
+            raise serializers.ValidationError("Business name is required for merchants.")
+        return value
+
+    def create(self, validated_data):
+        user = Account.objects.create(
+            first_name = validated_data['first_name'],
+            last_name = validated_data['last_name'],
+            username=validated_data['username'],
+            email=validated_data['email'],
+            phone_number=validated_data['phone_number'],
+            business_name=validated_data['business_name'],
+        )
+        user.set_password(validated_data['password'])
+        user.save()
+
+        # Send OTPs
+        otp = generate_otp()
+        user.otp = otp
+        user.otp_created_at = now()
+        user.save()
+
+        if validated_data['email']:
+            send_otp_email(user.email, otp)
+
+        if validated_data['phone_number']:
+            send_otp_sms(user.phone_number, otp)
+        return Account.objects.create_user(**validated_data)
+    
+    def save(self):
+        password = self.validated_data['password']    
+        password2 = self.validated_data['password2']
+        
+        #Add validations before saving
+
+        if password != password2:
+            raise serializers.ValidationError({'password' : 'Passwords do not match.'})  #Make sure that passwords match
+
+        account = Account (
+            email = self.validated_data['email'],
+        )
+        
+        account.set_password(password)
+        account.save()
+        return account
+
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -130,7 +255,7 @@ class AccountSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Account
-        fields = ['id', 'email','username','first_name', 'last_name', 'phone_number', 'profile_image']
+        fields = ['id', 'email','username','first_name', 'last_name', 'phone_number', 'profile_image', 'user_type']
         read_only_fields = ['id', 'email_verified', 'phone_verified']
 
     # This is to update user details 
@@ -148,6 +273,8 @@ class AccountSerializer(serializers.ModelSerializer):
             instance.email=self.validated_data['email']
         if self.validated_data.get('profile_image'):
             instance.profile_image = self.validated_data['profile_image']
+        if self.validated_data.get('user_type'):
+            instance.user_type = self.validated_data['user_type']
         
         # Save the instance 
         instance.save()
