@@ -14,3 +14,17 @@ def send_booking_email(to_email, seat_number):
         print("Invalid header found.")
     except Exception as e:
         print(f"Error sending email: {e}")
+
+def send_refund_email(user_email, subject, message):
+    """Send email notification for refund status"""
+    send_mail(
+        subject,
+        message,
+        settings.EMAIL_HOST_USER,
+        [user_email],
+        fail_silently=False,
+    )
+
+def generate_shareable_links(ticket):
+    base_url = "http://127.0.0.1:8000/main/tickets" #Change in Production  
+    return f"{base_url}/{ticket.id}/"

@@ -49,12 +49,13 @@ INSTALLED_APPS = [
     # Authentication
     'rest_framework',
     'rest_framework.authtoken',
-    'rest_framework_simplejwt',
-    'rest_framework_simplejwt.token_blacklist',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
+    'oauth2_provider',
+    'social_django',
+    'drf_social_oauth2',
     
     # Local apps
     'accounts',
@@ -65,13 +66,13 @@ INSTALLED_APPS = [
     'location_field.apps.DefaultConfig',
     'drf_yasg',
     'corsheaders',
+    'coreapi',
 ]
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         # 'rest_framework.permissions.IsAuthenticated',
@@ -80,13 +81,6 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
       'rest_framework.renderers.JSONRenderer',   #This is to remove the usual django render template
     ]
-}
-
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
 }
 
 AUTHENTICATION_BACKENDS = [
