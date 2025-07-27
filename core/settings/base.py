@@ -10,24 +10,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # Secret key
 SECRET_KEY = config('SECRET_KEY')
 
-AUTH_USER_MODEL = 'accounts.Account'
 
 # Debug
 DEBUG = False
 
 # Allowed Hosts
-ALLOWED_HOSTS = ['127.0.0.1', '127.0.0.1:8000', 'allotease-backend.onrender.com']
+ALLOWED_HOSTS = ['127.0.0.1', '127.0.0.1:8000', 'allotease-backend.onrender.com', 'localhost']
 CSRF_TRUSTED_ORIGINS = ['https://allotease-backend.onrender.com', 'http://127.0.0.1:8000']
-
-# Email
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # For development
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend' # For production
-EMAIL_HOST = config('EMAIL_HOST')
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD') 
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 
 
 # KUDA
@@ -59,7 +48,7 @@ INSTALLED_APPS = [
     'drf_social_oauth2',
     
     # Local apps
-    'accounts',
+    'user',
     'main',
     'wallet',
 
@@ -68,7 +57,25 @@ INSTALLED_APPS = [
     'drf_yasg',
     'corsheaders',
     'coreapi',
+    'anymail',
 ]
+
+AUTH_USER_MODEL = 'user.Account'
+
+# Email
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # For development
+EMAIL_BACKEND = 'anymail.backends.brevo.EmailBackend' # For production
+EMAIL_HOST = config('EMAIL_HOST')
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD') 
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
+BREVO_API_KEY = config('BREVO_API_KEY')
+
+ANYMAIL = {
+    "BREVO_API_KEY": config('BREVO_API_KEY')
+}
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -97,6 +104,12 @@ AUTHENTICATION_BACKENDS = [
     # `allauth` specific authentication methods, such as login by email
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
+
+
+CELERY_BROKER_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+
 
 # Middleware
 MIDDLEWARE = [
@@ -161,7 +174,7 @@ DATABASES = {
     }
 }
 
-DATABASES['default'] = dj_database_url.parse(config('External_Database_URL'))
+# DATABASES['default'] = dj_database_url.parse(config('External_Database_URL'))
 
 # Password Validators
 AUTH_PASSWORD_VALIDATORS = [

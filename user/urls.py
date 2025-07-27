@@ -4,11 +4,15 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 from .views import *
-from accounts import router as users_api_router
 
-api_url_patterns = [
-    path(r'', include(users_api_router.router.urls))
-]
+
+
+
+# from user import router as users_api_router
+
+# api_url_patterns = [
+#     path(r'', include(users_api_router.router.urls))
+# ]
 
 
 urlpatterns = [
@@ -26,7 +30,7 @@ urlpatterns = [
     path('signup/merchant/', MerchantSignupView.as_view(), name='signup-merchant'),
     path('merchant/register-form/', CreateMerchant.as_view(), name ='register_merchant_form'),
     path('profile/', AccountProfileView.as_view(), name='user_profile'),
-    path('', include(api_url_patterns)),
+    # path('', include(api_url_patterns)),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

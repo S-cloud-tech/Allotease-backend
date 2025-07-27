@@ -141,11 +141,3 @@ class MerchantDashboardSerializer(serializers.ModelSerializer):
         model = MerchantDashboard
         fields = '__all__'
 
-class RefundSerializer(serializers.ModelSerializer):
-    ticket_code = serializers.CharField(source="ticket.ticket_code", read_only=True)
-    event_name = serializers.CharField(source="ticket.event.name", read_only=True)
-
-    class Meta:
-        model = Refund
-        fields = ["id", "ticket_code", "event_name", "reason", "status", "requested_at", "processed_at"]
-

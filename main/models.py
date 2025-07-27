@@ -1,12 +1,8 @@
 import os
 from django.db import models
-from django.utils.timezone import now
-from django.conf import settings
 import uuid
 from location_field.models.plain import PlainLocationField
-from accounts.models import Account, Merchant
-from paystackapi.transaction import Transaction
-from .utils.mail import send_refund_email
+from user.models import Account, Merchant
 
 
 def receipt_upload_path(instance, filename):
@@ -35,7 +31,7 @@ class Ticket(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     is_free = models.BooleanField(default=False)  # Added field for free events
     city = models.CharField(max_length=255, default="")
-    location = PlainLocationField(based_fields=['city'], zoom=7, default=False) # Added field for map
+    location = PlainLocationField(based_fields=['city'], zoom=7, null=True, blank=True) # Added field for map
     total_tickets = models.PositiveIntegerField(default=1)
     payment_status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     receipt = models.FileField(upload_to=receipt_upload_path, null=True, blank=True)
@@ -112,17 +108,17 @@ class EventTicket(Ticket):
     )
 
     event_date = models.DateTimeField()
-    choice = models.CharField(max_length=6, choices=EVENT_CHOICES, default=LIVE)
+    choice = models.CharField(max_length=6, choices=EVENT_CHOICES)
     has_started     = models.BooleanField(default=False)
-    status = models.CharField(max_length=20, choices=STATUSES, default=NOT_STARTED)
-    # user = models.ForeignKey(Account, blank=False, null=True, default=None, on_delete=models.CASCADE, related_name="regular")
-    # organizer = models.ForeignKey(Merchant, null=True, blank=True, default=None, on_delete=models.CASCADE, related_name="merchant")
+    status = models.CharField(max_length=20, choices=STATUSES)
+    user = models.ForeignKey(Account, blank=False, null=True, default=None, on_delete=models.CASCADE, related_name="regular")
+    organizer = models.ForeignKey(Merchant, null=True, blank=True, default=None, on_delete=models.CASCADE, related_name="merchant")
     is_online = models.BooleanField(default=False)  # Added field for online events
     online_link = models.URLField(null=True, blank=True)  # Link for online events
     agenda = models.JSONField(default=list)  # Added field for agenda and time
     tags = models.ManyToManyField('Tag', blank=True, related_name='event_tickets')
-    # seat_number = models.ManyToManyField('Seat', blank=True, related_name='event_seats')
-    # seat = models.OneToOneField(Seat, on_delete=models.SET_NULL, null=True, blank=True)
+    seat_number = models.ManyToManyField('Seat', blank=True, related_name='event_seats')
+    seat = models.OneToOneField(Seat, on_delete=models.SET_NULL, null=True, blank=True)
     qr_code = models.ImageField(upload_to='qr_codes/', null=True, blank=True)
     start_date = models.DateTimeField(null=True)
     end_date = models.DateTimeField(null=True)
@@ -168,7 +164,7 @@ class ParkingTicket(Ticket):
 # CheckIn
 class CheckIn(models.Model):
     ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE)
-    # user = models.ForeignKey(Account, on_delete=models.CASCADE)
+    user = models.ForeignKey(Account, null=True, on_delete=models.CASCADE)
     check_in_time =  models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -188,7 +184,7 @@ class Reservation(models.Model):
 class SeatReservation(models.Model):
     event_ticket = models.ForeignKey(EventTicket, on_delete=models.CASCADE, related_name="reserved_seats")
     seat_number = models.CharField(max_length=10)  # Example: A1, B2
-    user = models.ForeignKey(Account, on_delete=models.CASCADE)
+    # user = models.ForeignKey(Account, on_delete=models.CASCADE)
 
     class Meta:
         unique_together = ('event_ticket', 'seat_number')  # Prevent duplicate reservations
@@ -196,14 +192,14 @@ class SeatReservation(models.Model):
 class ParkingSlotReservation(models.Model):
     parking_ticket = models.ForeignKey(ParkingTicket, on_delete=models.CASCADE, related_name="reserved_slots")
     slot_number = models.CharField(max_length=10)  # Example: P1, P2
-    user = models.ForeignKey(Account, on_delete=models.CASCADE)
+    # user = models.ForeignKey(Account, on_delete=models.CASCADE)
 
     class Meta:
         unique_together = ('parking_ticket', 'slot_number')  # Prevent duplicate reservations
 
 
 class MerchantDashboard(models.Model):
-    merchant = models.OneToOneField(Merchant, on_delete=models.CASCADE)
+    # merchant = models.OneToOneField(Merchant, on_delete=models.CASCADE)
     total_tickets = models.IntegerField(default=0)
     total_tickets_sold = models.IntegerField(default=0)
     revenue_generated = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -213,53 +209,10 @@ class MerchantDashboard(models.Model):
         return f"Dashboard for {self.merchant.user.username}"
 
 class DigitalIdentityVerification(models.Model):
-    user = models.OneToOneField(Account, on_delete=models.CASCADE, related_name='digital_identity')
+    # user = models.OneToOneField(Account, on_delete=models.CASCADE, related_name='digital_identity')
     is_verified = models.BooleanField(default=False)
     verification_document = models.FileField(upload_to='verification_documents/')
     verification_date = models.DateTimeField(null=True, blank=True)
 
-class Refund(models.Model):
-    user = models.ForeignKey(Account, on_delete=models.CASCADE)
-    ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE)
-    reason = models.TextField()
-    status = models.CharField(
-        max_length=10, choices=[("pending", "Pending"), ("approved", "Approved"), ("denied", "Denied")], default="pending"
-    )
-    requested_at = models.DateTimeField(auto_now_add=True)
-    processed_at = models.DateTimeField(null=True, blank=True)
 
-    def approve_refund(self):
-        """Mark refund as approved and process refund"""
-        self.status = "approved"
-        self.processed_at = now()
-        self.ticket.status = "available"  # Release the ticket
-        self.ticket.save()
-        self.save()
-
-    def deny_refund(self):
-        """Deny the refund request"""
-        self.status = "denied"
-        self.processed_at = now()
-        self.save()
-
-        # Send email to user
-        subject = "Refund Denied ❌"
-        message = f"Hello {self.user.username}, your refund request for ticket {self.ticket.ticket_code} has been denied."
-        send_refund_email(self.user.email, subject, message)
-
-    def process_paystack_refund(self):
-        """Trigger a refund request to Paystack"""
-        transaction = Transaction.list(reference=self.ticket.ticket_code)
-        if transaction.get("status") and transaction["data"]:
-            trans_id = transaction["data"][0]["id"]
-            response = Transaction.refund(trans_id, settings.PAYSTACK_SECRET_KEY)
-
-            if response["status"]:
-                self.status = "approved"
-                self.processed_at = now()
-                self.ticket.status = "available"  # Reset the ticket for resale
-                self.ticket.save()
-                self.save()
-                return True
-        return False
 
