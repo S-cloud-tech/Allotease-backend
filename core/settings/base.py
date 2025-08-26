@@ -15,8 +15,8 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = True
 
 # Allowed Hosts
-ALLOWED_HOSTS = ['127.0.0.1', '127.0.0.1:8000', 'allotease-backend.onrender.com', 'localhost']
-CSRF_TRUSTED_ORIGINS = ['https://allotease-backend.onrender.com', 'http://127.0.0.1:8000']
+ALLOWED_HOSTS = ['127.0.0.1', '127.0.0.1:8000', 'allotease-backend.onrender.com',]
+CSRF_TRUSTED_ORIGINS = ['https://allotease-backend.onrender.com', 'http://127.0.0.1:8000', ]
 
 
 # KUDA
