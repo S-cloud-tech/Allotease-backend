@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
+from django.utils.translation import gettext_lazy as _
 from django.utils.timezone import now, timedelta
 from . models import Account
 from . utility import send_otp_email, send_otp_sms, generate_otp
@@ -191,12 +192,18 @@ class LoginSerializer(serializers.Serializer):
     def validate(self, data):
         email = data.get('email')
         password = data.get('password')
+        request = self.context.get('request')
 
-        user = authenticate(username=email, password=password)
+        if not email or not password:
+            raise serializers.ValidationError(_("Must include 'email' and 'password'"))
+        
+        user = authenticate(request=self.context.get('request'), username=email, password=password)
         if not user:
-            raise serializers.ValidationError("Invalid email or password.")
+            raise serializers.ValidationError(_("Invalid email or password."), code='authorization')
 
-        if not user.email_verified:
+        if not getattr(user, 'email_verified', False):
+            otp = generate_otp()
+            send_otp_email(user.email, otp)
             raise serializers.ValidationError("Email is not verified. Please verify your email before logging in.")
 
         data['user'] = user

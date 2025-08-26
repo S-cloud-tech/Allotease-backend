@@ -68,7 +68,6 @@ class LoginView(generics.GenericAPIView):
         if serializer.is_valid():
             user = serializer.validated_data['user']
 
-            # Generate or retrieve the token for the user
             token, created = Token.objects.get_or_create(user=user)
 
             return Response({
