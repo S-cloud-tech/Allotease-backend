@@ -1,7 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django_resized import ResizedImageField
-from wallet.models import Virtual_accounts
+from django_countries.fields import CountryField
+
 
 
 # This is the folder where profile images are stored
@@ -43,7 +44,7 @@ class Account(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(verbose_name="email", max_length=60, unique=True, db_index=True)
     username = models.CharField(max_length=30, null=True, blank=True, unique=True)
     user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES, default='regular')
-    business_name = models.CharField(max_length=255, blank=True, null=True)  # Only for merchants
+    country = CountryField(blank=True, null=True)
     date_joined = models.DateTimeField(verbose_name="date joined",   auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     last_login = models.DateTimeField(verbose_name="last login", auto_now=True)
@@ -61,9 +62,7 @@ class Account(AbstractBaseUser, PermissionsMixin):
     email_verified = models.BooleanField(default=False)
     phone_number = models.CharField(max_length=15, unique=True, blank=True, null=True)
     phone_verified = models.BooleanField(default=False)
-    paystack_virtual_account = models.JSONField(null=True, blank=True)
-    otp = models.CharField(max_length=6, blank=True, null=True)
-    otp_created_at = models.DateTimeField(blank=True, null=True)
+    
     
 
 
@@ -94,7 +93,7 @@ class Merchant(models.Model):
 
 
     user = models.OneToOneField(Account, on_delete=models.CASCADE, null=True)
-    wallet = models.OneToOneField(Virtual_accounts, on_delete=models.CASCADE, null=True, unique=True)
+    business_name = models.CharField(max_length=255, blank=True, null=True)  # Only for merchants
     active          = models.BooleanField(default=True)
     is_verified     = models.BooleanField(default=False)
     is_online       = models.BooleanField(default=False)

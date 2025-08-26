@@ -10,24 +10,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # Secret key
 SECRET_KEY = config('SECRET_KEY')
 
-AUTH_USER_MODEL = 'accounts.Account'
 
 # Debug
-DEBUG = False
+DEBUG = True
 
 # Allowed Hosts
 ALLOWED_HOSTS = ['127.0.0.1', '127.0.0.1:8000', 'allotease-backend.onrender.com',]
 CSRF_TRUSTED_ORIGINS = ['https://allotease-backend.onrender.com', 'http://127.0.0.1:8000', ]
-
-# Email
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # For development
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend' # For production
-EMAIL_HOST = config('EMAIL_HOST')
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD') 
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 
 
 # KUDA
@@ -59,7 +48,7 @@ INSTALLED_APPS = [
     'drf_social_oauth2',
     
     # Local apps
-    'accounts',
+    'user',
     'main',
     'wallet',
 
@@ -68,20 +57,39 @@ INSTALLED_APPS = [
     'drf_yasg',
     'corsheaders',
     'coreapi',
+    'anymail',
 ]
+
+AUTH_USER_MODEL = 'user.Account'
+
+# Email
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # For development
+EMAIL_BACKEND = 'anymail.backends.brevo.EmailBackend'
+EMAIL_HOST = config('EMAIL_HOST')
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD') 
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
+BREVO_API_KEY = config('BREVO_API_KEY')
+
+ANYMAIL = {
+    "BREVO_API_KEY": config('BREVO_API_KEY')
+}
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
+        # 'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        # 'rest_framework.permissions.IsAuthenticated',
-        'rest_framework.permissions.AllowAny',
+        # 'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_RENDERER_CLASSES': [
-      'rest_framework.renderers.JSONRenderer',   #This is to remove the usual django render template
+      'rest_framework.renderers.JSONRenderer',  
     ]
 }
 
@@ -91,34 +99,33 @@ SIMPLE_JWT = {
 }
 
 AUTHENTICATION_BACKENDS = [
-    # Needed to login by username in Django admin, regardless of `allauth`
     'django.contrib.auth.backends.ModelBackend',
-
-    # `allauth` specific authentication methods, such as login by email
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
-# Middleware
+
+CELERY_BROKER_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', #whitenoise
+    'whitenoise.middleware.WhiteNoiseMiddleware', 
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware', #corsheaders
+    'corsheaders.middleware.CorsMiddleware', 
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.locale.LocaleMiddleware', #Internalization
+    'django.middleware.locale.LocaleMiddleware', 
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    "allauth.account.middleware.AccountMiddleware", #allauth
+    "allauth.account.middleware.AccountMiddleware", 
 ]
 
 
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
-        # For each OAuth based provider, either add a ``SocialApp``
-        # (``socialaccount`` app) containing the required client
-        # credentials, or list them here:
         'APP': {
             'client_id': config('client_id'),
             'secret': config('secert'),
@@ -135,14 +142,12 @@ ROOT_URLCONF = 'core.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],  # Global templates
-        # 'DIRS': [BASE_DIR / 'templates'],  # Global templates
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
-                # Default processors
                 'django.template.context_processors.debug',
-                'django.template.context_processors.request',  # Required by allauth
+                'django.template.context_processors.request', 
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
@@ -156,12 +161,12 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',  # Change to PostgreSQL or others in production
+        'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
-DATABASES['default'] = dj_database_url.parse(config('External_Database_URL'))
+# DATABASES['default'] = dj_database_url.parse(config('External_Database_URL'))
 
 # Password Validators
 AUTH_PASSWORD_VALIDATORS = [
@@ -194,32 +199,4 @@ LOCATION_FIELD = {
     'provider.mapbox.id': 'mapbox.streets',
 }
 
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",  # Use Redis in production
-        "LOCATION": "unique-snowflake",
-    }
-}
-
-
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "root": {
-        "handlers": ["console"],
-        "level": "WARNING",
-    },
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-        },
-    },
-    "loggers": {
-        "django": {
-            "handlers": ["console"],
-            "level": os.getenv("DJANGO_LOG_LEVEL", "INFO"),
-            "propagate": False,
-        },
-    },
-}
 
