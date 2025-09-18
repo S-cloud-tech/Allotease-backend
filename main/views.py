@@ -102,7 +102,6 @@ class TicketViewSet(viewsets.ModelViewSet):
 
             email.send()
 
-
 class ReservationViewSet(viewsets.ModelViewSet):
     queryset = Reservation.objects.all()
     serializer_class = serializers.ReservationSerializer
@@ -179,7 +178,6 @@ class EventTicketViewSet(viewsets.ModelViewSet):
 
         return Response({"events": list(events)}, status=200)
     
-
 class AccommodationTicketViewSet(viewsets.ModelViewSet):
     queryset = AccommodationTicket.objects.all()
     serializer_class = serializers.AccommodationTicketSerializer
@@ -230,7 +228,6 @@ class RegisterForEventAPI(APIView):
         except EventTicket.DoesNotExist:
             return Response({"error": "Event not found."}, status=404)
 
-
 class CheckInViewSet(viewsets.ModelViewSet):
     queryset = CheckIn.objects.all()
     serializer_class = serializers.CheckInSerialiezer
@@ -254,11 +251,9 @@ class BulkTicketCreateView(viewsets.ViewSet):
             return Response({"tickets": serializers.TicketSerializer(tickets, many=True).data}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = serializers.TagSerializer
-
 
 class MerchantDahboardViewSet(viewsets.ModelViewSet):
     queryset = MerchantDashboard.objects.all()
@@ -268,7 +263,6 @@ class MerchantDahboardViewSet(viewsets.ModelViewSet):
         dashboard, _ = MerchantDashboard.objects.get_or_create(merchant_id=pk)
         serializer = serializers.MerchantDashboardSerializer(dashboard)
         return Response(serializer.data)
-
 
 class UploadVerificationDocumentView(APIView):
     permission_classes = [AllowAny]
