@@ -14,4 +14,4 @@ python manage.py collectstatic --no-input
 python manage.py migrate
 
 # Update pip
-#python -m pip install --upgrade pip
+python -m pip install --upgrade pip
