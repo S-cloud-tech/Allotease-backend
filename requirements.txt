@@ -29,6 +29,7 @@ django-countries==7.6.1
 django-location-field==2.7.3
 django-oauth-toolkit==3.0.1
 django-otp==1.5.4
+django-redis==6.0.0
 django-resized==1.0.3
 djangorestframework==3.15.2
 djangorestframework_simplejwt==5.5.0
@@ -56,6 +57,7 @@ pluggy==1.5.0
 prompt_toolkit==3.0.48
 propcache==0.2.1
 psycopg2==2.9.10
+pur==7.3.3
 pycparser==2.22
 PyJWT==2.9.0
 pyotp==2.9.0
