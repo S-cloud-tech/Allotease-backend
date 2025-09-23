@@ -166,7 +166,7 @@ DATABASES = {
     }
 }
 
-# DATABASES['default'] = dj_database_url.parse(config('External_Database_URL'))
+DATABASES['default'] = dj_database_url.parse(config('External_Database_URL'))
 
 # Password Validators
 AUTH_PASSWORD_VALIDATORS = [
@@ -197,6 +197,14 @@ LOCATION_FIELD = {
     'provider.mapbox.access_token': config('MAPBOX_TOKEN'),
     'provider.mapbox.max_zoom': 18,
     'provider.mapbox.id': 'mapbox.streets',
+}
+
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": config('REDIS_LOCATION'),
+    }
 }
 
 
