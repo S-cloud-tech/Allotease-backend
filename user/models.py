@@ -1,8 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-from django.core.mail import message
 from django_resized import ResizedImageField
-import uuid
+from django_countries.fields import CountryField
+
 
 
 # This is the folder where profile images are stored
@@ -12,8 +12,7 @@ def upload_location(instance, filename):
     )
     return file_path
 
-
-class AccountManager(BaseUserManager):
+class AccountManager(BaseUserManager): 
     def create_user(self, email, password=None):
         if email is None:
             raise TypeError('User should have an Email')
@@ -37,8 +36,15 @@ class AccountManager(BaseUserManager):
 
 
 class Account(AbstractBaseUser, PermissionsMixin):
+    USER_TYPE_CHOICES = (
+        ('regular', 'Regular User'),
+        ('merchant', 'Merchant'),
+    )
+
     email = models.EmailField(verbose_name="email", max_length=60, unique=True, db_index=True)
-    username = models.CharField(max_length=30, null=True, blank=True)
+    username = models.CharField(max_length=30, null=True, blank=True, unique=True)
+    user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES, default='regular')
+    country = CountryField(blank=True, null=True)
     date_joined = models.DateTimeField(verbose_name="date joined",   auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     last_login = models.DateTimeField(verbose_name="last login", auto_now=True)
@@ -56,8 +62,7 @@ class Account(AbstractBaseUser, PermissionsMixin):
     email_verified = models.BooleanField(default=False)
     phone_number = models.CharField(max_length=15, unique=True, blank=True, null=True)
     phone_verified = models.BooleanField(default=False)
-    otp = models.CharField(max_length=6, blank=True, null=True)
-    otp_created_at = models.DateTimeField(blank=True, null=True)
+    
     
 
 
@@ -69,19 +74,29 @@ class Account(AbstractBaseUser, PermissionsMixin):
         return self.email
 
 
-class Merchant_Type(models.Model):
-    id = models.UUIDField(default=uuid.uuid4, editable=False,unique=True, null=False, primary_key=True)
-
 
 class Merchant(models.Model):
+
+    INDIVIDUAL = 'INDIVIDUAL'
+    COMPANY = 'COMPANY'
+    NONPROFIT = 'NONPROFIT'
+    EDUCATIONAL = 'EDUCATIONAL'
+    GOVERNMENT = 'GOVERNMENT'
+
+    MERCHANT_TYPE = [
+        ('INDIVIDUAL','INDIVIDUAL'),
+        ('COMPANY','COMPANY'),
+        ('NONPROFIT','NONPROFIT'),
+        ('EDUCATIONAL','EDUCATIONAL'),
+        ('GOVERNMENT','GOVERNMENT'),
+    ]
+
+
     user = models.OneToOneField(Account, on_delete=models.CASCADE, null=True)
-    merchant_type = models.ForeignKey(Merchant_Type, on_delete=models.CASCADE, null=True)
+    business_name = models.CharField(max_length=255, blank=True, null=True)  # Only for merchants
     active          = models.BooleanField(default=True)
     is_verified     = models.BooleanField(default=False)
     is_online       = models.BooleanField(default=False)
-    completed_events = models.IntegerField(default = 0, null=True, blank = True)
-    cancelled_events = models.IntegerField(default = 0, null=True, blank = True)
-    total_events     = models.IntegerField(default = 0, null=True, blank = True)
-
-    def _str_(self):
-        return self.merchant_type
+    completed_tickets = models.IntegerField(default = 0, null=True, blank = True)
+    cancelled_tickets = models.IntegerField(default = 0, null=True, blank = True)
+    total_created_tickets     = models.IntegerField(default = 0, null=True, blank = True)

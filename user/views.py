@@ -1,13 +1,15 @@
-from rest_framework import generics, status
+from rest_framework import generics, status, permissions, viewsets
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
+from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.authtoken.models import Token
-from django.shortcuts import render, get_object_or_404, redirect
-from django.utils.timezone import now, timedelta
+from django.utils.timezone import now
 from django.core.cache import cache
+from django.shortcuts import render
+from django.template.loader import render_to_string
 from . import serializers
 from .models import Account
-from .utility import generate_otp, send_otp_email, send_otp_sms
+from .utility import generate_otp, send_otp_email, send_otp_sms, generate_random_string, send_email
 
 # Register Users and Sending OTP to email
 class RegisterView(generics.GenericAPIView):
@@ -22,13 +24,40 @@ class RegisterView(generics.GenericAPIView):
 
             user_data = serializer.data
             user = Account.objects.get(email=user_data['email'])
-            token = RefreshToken.for_user(user)
+            # token = RefreshToken.for_user(user)
 
             return Response({
-                "message": "User registered successfully. An OTP has been sent to your email for verification."
+                "message": "User registered successfully. An OTP has been sent to your email for verification." # Remove in production
             }, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class RegularUserSignupView(APIView):
+    serializer_class = serializers.RegularUserSignupSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        user = request.data
+        serializer = self.serializer_class(data=user)
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response({"message": "Regular user registered successfully!"}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class MerchantSignupView(APIView):
+    serializer_class = serializers.MerchantSignupSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        user = request.data
+        serializer = self.serializer_class(data=user)
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response({"message": "Merchant registered successfully!"}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 # Login Users
 class LoginView(generics.GenericAPIView):
@@ -39,15 +68,33 @@ class LoginView(generics.GenericAPIView):
         if serializer.is_valid():
             user = serializer.validated_data['user']
 
-            # Generate or retrieve the token for the user
             token, created = Token.objects.get_or_create(user=user)
 
             return Response({
                 "token": token.key,
-                "message": "Login successful."
+                "message": "Login successful." # Remove in production
             }, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+# Delete User Account
+class DeleteUser(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = serializers.AccountSerializer
+
+    def post(self, request):
+        user = request.user
+        stop = False
+        i = 1
+        while stop == False:
+            email = str(user.email)+"_deactivated"+str(i)
+            if Account.objects.filter(email=email).exists() == False:
+                user.email = email
+                user.is_active = False
+                user.save()
+            else:
+                i = i+1
+        return Response({"data":'Successfully Deleted your account'}, status=status.HTTP_200_OK)
 
 # Sending OTP to user's email   
 class SendOTPView(generics.GenericAPIView):
@@ -121,8 +168,7 @@ class VerifyOTPView(generics.GenericAPIView):
                 {"error": "Invalid OTP. Please try again."},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
-        
+     
 # Request for password reset
 class PasswordResetRequestView(generics.GenericAPIView):
     serializer_class = serializers.PasswordResetRequestSerializer
@@ -188,3 +234,57 @@ class AccountProfileView(generics.RetrieveAPIView):
         return Response({"message": "User profile deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
 
 
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = Account.objects.all()
+    serializer_class = serializers.AccountSerializer
+
+
+class CreateMerchant(APIView):
+    def get(self, request):
+        return render(request, 'admin_form.html')
+    
+    def post(self, request):
+
+        data = request.data
+        password = generate_random_string()
+        user = Account.objects.create_user(
+            phone=data["phone"], password=password, 
+        )
+        user.email = data["email"]
+        user.username = data["username"]
+        user.first_name = data["firstName"]
+        user.last_name = data["lastName"]
+        user.fullname = f"{data['firstName']} {data['lastName']}"
+        user.phone_verified = True
+        user.is_verified = True
+        user.save()
+
+        # driver_type = DriverType.objects.get(type_name=data["driverType"])
+      
+        # Driver.objects.create(
+        #     user=user,
+        #     driver_license_number=data["driverLicenseNumber"],
+        #     driver_type=driver_type,
+        #     driver_license_image = data["driverLicenseImage"],
+        # )
+
+        mail_subject = "Welcome"
+        html_message = render_to_string('welcome.html', {
+        'username': user.fullname,
+    })
+        
+        send_email(user.email, html_message, mail_subject)
+
+        mail_subject = "account creation"
+        html_message = render_to_string('account_creation.html', {
+        'name': user.fullname,   
+        'username':user.username,
+        'phone': data['phone'],
+        'password': password
+    })
+        
+        send_email(user.email, html_message, mail_subject)
+
+        
+
+        return Response({"message": "User and Driver created successfully!"})

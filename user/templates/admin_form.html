@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Sign Up</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script
+      src="https://unpkg.com/react@18/umd/react.development.js"
+      crossorigin
+    ></script>
+    <script
+      src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"
+      crossorigin
+    ></script>
+
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      function UserAdminForm() {
+        const [formData, setFormData] = React.useState({
+          phone: "",
+          email: "",
+          username: "",
+          password: "",
+          firstName: "",
+          lastName: "",
+          driverType: "",
+          driverLicenseNumber: "",
+          driverLicenseImage: null,
+        });
+        const [driverTypes, setDriverTypes] = React.useState([]);
+        const fileInputRef = React.useRef(null);
+
+        React.useEffect(() => {
+          async function fetchMerchantTypes() {
+            try {
+              const response = await axios.get("/accounts/driver/type/");
+              setDriverTypes(response.data.response || []);
+            } catch (error) {
+              console.error("Error fetching driver types:", error);
+            }
+          }
+          fetchMerchantTypes();
+        }, []);
+
+        const handleChange = (e) => {
+          setFormData({ ...formData, [e.target.name]: e.target.value });
+        };
+
+        const handleFileChange = (e) => {
+          setFormData({ ...formData, driverLicenseImage: e.target.files[0] });
+        };
+
+        const handleSubmit = async (e) => {
+          e.preventDefault();
+
+          try {
+            const formDataCopy = new FormData();
+            formDataCopy.append("phone", formData.phone);
+            formDataCopy.append("password", formData.password);
+            formDataCopy.append("firstName", formData.firstName);
+            formDataCopy.append("lastName", formData.lastName);
+            formDataCopy.append("merchantType", formData.merchantType);
+            formDataCopy.append("email", formData.email);
+            formDataCopy.append("username", formData.username);
+            formDataCopy.append("merchantLicenseImage", null);
+            formDataCopy.append(
+              "merchantLicenseNumber",
+              formData.merchantLicenseNumber
+            );
+            formDataCopy.append(
+              "merchantLicenseImage",
+              formData.merchantLicenseImage || ""
+            );
+
+            const response = await fetch("/accounts/merchant/register-form/", {
+              method: "POST",
+              body: formDataCopy,
+            });
+
+            if (response.ok) {
+              alert("User and Merchant created successfully!");
+
+              setFormData({
+                phone: "",
+                email: "",
+                username: "",
+                password: "",
+                firstName: "",
+                lastName: "",
+                merchantType: "",
+                merchantLicenseNumber: "",
+                merchantLicenseImage: null,
+              });
+
+              // Reset the file input
+              if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+              }
+            } else {
+              const errorData = await response.json();
+              alert("Error: " + errorData.message);
+            }
+          } catch (error) {
+            alert("An unexpected error occurred.");
+          }
+        };
+
+        return (
+          <div className="max-w-screen-lg mx-auto mt-20 p-6 bg-white shadow-lg rounded-md">
+            <h1 className="text-2xl font-bold mb-4">Create Admin</h1>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="flex gap-x-4">
+                <div className="w-1/3">
+                  <label className="block text-sm font-medium">Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="mt-1 block w-full px-4 py-2 border rounded-md"
+                    required
+                  />
+                </div>
+                <div className="w-1/3">
+                  <label className="block text-sm font-medium">Phone</label>
+                  <input
+                    type="text"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    className="mt-1 block w-full px-4 py-2 border rounded-md"
+                    required
+                  />
+                </div>
+                <div className="w-1/3">
+                  <label className="block text-sm font-medium">Username</label>
+                  <input
+                    type="text"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleChange}
+                    className="mt-1 block w-full px-4 py-2 border rounded-md"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-x-4">
+                <div className="w-1/2">
+                  <label className="block text-sm font-medium">First Name</label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleChange}
+                    className="mt-1 block w-full px-4 py-2 border rounded-md"
+                    required
+                  />
+                </div>
+                <div className="w-1/2">
+                  <label className="block text-sm font-medium">Last Name</label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleChange}
+                    className="mt-1 block w-full px-4 py-2 border rounded-md"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-x-4">
+                <div className="w-1/2">
+                  <label className="block text-sm font-medium">
+                    Merchant License Number
+                  </label>
+                  <input
+                    type="text"
+                    name="merchantLicenseNumber"
+                    value={formData.merchantLicenseNumber}
+                    onChange={handleChange}
+                    className="mt-1 block w-full px-4 py-2 border rounded-md"
+                    required
+                  />
+                </div>
+                <div className="w-1/2">
+                  <label className="block text-sm font-medium">Merchant Type</label>
+                  <select
+                    name="merchantType"
+                    value={formData.driverType}
+                    onChange={handleChange}
+                    className="mt-1 block w-full px-4 py-2 border rounded-md"
+                  >
+                    <option value="">Select Type</option>
+                    {merchantypes.map((type) => (
+                      <option key={type.type_name} value={type.type_name}>
+                        {type.type_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-x-4">
+                <div className="w-1/2">
+                  <label className="block text-sm font-medium">
+                    Merchant License Image
+                  </label>
+                  <input
+                    type="file"
+                    name="merchantLicenseImage"
+                    onChange={handleFileChange}
+                    ref={fileInputRef}
+                    className="w-full mt-1"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600"
+              >
+                Submit
+              </button>
+            </form>
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(
+        <UserAdminForm />
+      );
+    </script>
+  </body>
+</html>

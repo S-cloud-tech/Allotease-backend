@@ -1,7 +1,12 @@
+import os
 from django.db import models
 import uuid
 from location_field.models.plain import PlainLocationField
-from accounts.models import Account
+from user.models import Account, Merchant
+
+
+def receipt_upload_path(instance, filename):
+    return f"receipts/{uuid.uuid4()}_{filename}"
 
 
 class Ticket(models.Model):
@@ -10,6 +15,14 @@ class Ticket(models.Model):
         ('accommodation', 'Accommodation'),
         ('parking', 'Parking'),
     ]
+
+    STATUS_CHOICES = [
+        ('', ''),
+        ('pending', 'Pending'),
+        ('paid', 'Paid'),
+        ('cancelled', 'Cancelled'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
     title = models.CharField(max_length=255)
@@ -18,13 +31,22 @@ class Ticket(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     is_free = models.BooleanField(default=False)  # Added field for free events
     city = models.CharField(max_length=255, default="")
-    location = PlainLocationField(based_fields=['city'], zoom=7, default=False) # Added field for map
+    location = PlainLocationField(based_fields=['city'], zoom=7, null=True, blank=True) # Added field for map
     total_tickets = models.PositiveIntegerField(default=1)
+    payment_status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    receipt = models.FileField(upload_to=receipt_upload_path, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.category} - {self.title}"
+    
+    def save(self, *args, **kwargs):
+        if not self.ticket_code:
+            self.ticket_code = self.generate_ticket_code()
+        if self.status == 'paid':  # Generate QR only after payment
+            self.generate_qr_code()
+        super().save(*args, **kwargs)
     
     def display_price(self):
         return "Free" if self.is_free else f"${self.price}"
@@ -34,6 +56,32 @@ class Ticket(models.Model):
     
     def tickets_remaining(self):
         return self.total_tickets - self.tickets_reserved()
+
+    def is_sold_out(self):
+        return self.tickets_remaining() <= 0
+    
+    def delete_old_receipt(self):
+        """Delete the old receipt file if it exists"""
+        if self.receipt:
+            if os.path.isfile(self.receipt.path):
+                os.remove(self.receipt.path)
+
+# Seat model
+class Seat(models.Model):
+    # ticket = models.ForeignKey(EventTicket, on_delete=models.CASCADE, related_name="seats", null=True)
+    row = models.CharField(max_length=10, null=True)
+    seat_number = models.CharField(max_length=20)
+    is_booked = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Seat {self.seat_number} ({'Reserved' if self.is_booked else 'Available'})"
+
+# Tag model
+class Tag(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
 
 # Event-specific Information
 class EventTicket(Ticket):
@@ -60,16 +108,20 @@ class EventTicket(Ticket):
     )
 
     event_date = models.DateTimeField()
-    choice = models.CharField(max_length=6, choices=EVENT_CHOICES, default=LIVE)
+    choice = models.CharField(max_length=6, choices=EVENT_CHOICES)
     has_started     = models.BooleanField(default=False)
-    status = models.CharField(max_length=20, choices=STATUSES, default=NOT_STARTED)
+    status = models.CharField(max_length=20, choices=STATUSES)
+    user = models.ForeignKey(Account, blank=False, null=True, default=None, on_delete=models.CASCADE, related_name="regular")
+    organizer = models.ForeignKey(Merchant, null=True, blank=True, default=None, on_delete=models.CASCADE, related_name="merchant")
     is_online = models.BooleanField(default=False)  # Added field for online events
     online_link = models.URLField(null=True, blank=True)  # Link for online events
     agenda = models.JSONField(default=list)  # Added field for agenda and time
     tags = models.ManyToManyField('Tag', blank=True, related_name='event_tickets')
-    # seat_number = models.ManyToManyField('Seat', blank=True, related_name='event_seats')
-    seat = models.OneToOneField('Seat', on_delete=models.SET_NULL, null=True, blank=True)
+    seat_number = models.ManyToManyField('Seat', blank=True, related_name='event_seats')
+    seat = models.OneToOneField(Seat, on_delete=models.SET_NULL, null=True, blank=True)
     qr_code = models.ImageField(upload_to='qr_codes/', null=True, blank=True)
+    start_date = models.DateTimeField(null=True)
+    end_date = models.DateTimeField(null=True)
 
     def __str__(self):
         return f"{self.id}"
@@ -85,17 +137,6 @@ class EventTicket(Ticket):
             for i in range(1, self.total_tickets + 1):
                 Seat.objects.create(ticket=self, seat_number=f"Seat-{i}")
     
-
-class Seat(models.Model):
-    ticket = models.ForeignKey(EventTicket, on_delete=models.CASCADE, related_name="seats", null=True)
-    row = models.CharField(max_length=10, null=True)
-    seat_number = models.CharField(max_length=20)
-    is_booked = models.BooleanField(default=False)
-
-    def __str__(self):
-        return f"Seat {self.seat_number} ({'Reserved' if self.is_booked else 'Available'})"
-
-
 # Accommodation-specific Information
 class AccommodationTicket(Ticket):
     ACCOMMODATION_CHOICES = [
@@ -120,17 +161,15 @@ class ParkingTicket(Ticket):
     def __str__(self):
         return f"{self.id}"
 
-
+# CheckIn
 class CheckIn(models.Model):
     ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE)
+    user = models.ForeignKey(Account, null=True, on_delete=models.CASCADE)
     check_in_time =  models.DateTimeField(auto_now_add=True)
 
-
-class Tag(models.Model):
-    name = models.CharField(max_length=50, unique=True)
-
     def __str__(self):
-        return self.name
+        return f"Check-in: {self.user.username} for {self.ticket.title}"
+
 
 class Reservation(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE)
@@ -140,3 +179,40 @@ class Reservation(models.Model):
 
     def __str__(self):
         return f"Reserved for {self.ticket.title}"
+
+
+class SeatReservation(models.Model):
+    event_ticket = models.ForeignKey(EventTicket, on_delete=models.CASCADE, related_name="reserved_seats")
+    seat_number = models.CharField(max_length=10)  # Example: A1, B2
+    # user = models.ForeignKey(Account, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('event_ticket', 'seat_number')  # Prevent duplicate reservations
+
+class ParkingSlotReservation(models.Model):
+    parking_ticket = models.ForeignKey(ParkingTicket, on_delete=models.CASCADE, related_name="reserved_slots")
+    slot_number = models.CharField(max_length=10)  # Example: P1, P2
+    # user = models.ForeignKey(Account, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('parking_ticket', 'slot_number')  # Prevent duplicate reservations
+
+
+class MerchantDashboard(models.Model):
+    # merchant = models.OneToOneField(Merchant, on_delete=models.CASCADE)
+    total_tickets = models.IntegerField(default=0)
+    total_tickets_sold = models.IntegerField(default=0)
+    revenue_generated = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
+
+    def __str__(self):
+        return f"Dashboard for {self.merchant.user.username}"
+
+class DigitalIdentityVerification(models.Model):
+    # user = models.OneToOneField(Account, on_delete=models.CASCADE, related_name='digital_identity')
+    is_verified = models.BooleanField(default=False)
+    verification_document = models.FileField(upload_to='verification_documents/')
+    verification_date = models.DateTimeField(null=True, blank=True)
+
+
+

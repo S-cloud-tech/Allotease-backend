@@ -10,24 +10,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # Secret key
 SECRET_KEY = config('SECRET_KEY')
 
-AUTH_USER_MODEL = 'accounts.Account'
 
 # Debug
-DEBUG = False
+DEBUG = True
 
 # Allowed Hosts
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1', '127.0.0.1:8000', 'allotease-backend.onrender.com',]
+CSRF_TRUSTED_ORIGINS = ['https://allotease-backend.onrender.com', 'http://127.0.0.1:8000', ]
 
-# Email
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # For development
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend' # For production
-EMAIL_HOST = config('EMAIL_HOST')
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD') 
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 
+# KUDA
+KUDA_KEY = config('KUDA_KEY')
+KUDA_TEST = config('KUDA_TEST')
+KUDA_EMAIL = config('KUDA_EMAIL')
+KUDA_BASE_URL = config('KUDA_BASE_URL')
 
 # Installed Apps
 INSTALLED_APPS = [
@@ -43,56 +39,101 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
-    'rest_framework_simplejwt.token_blacklist',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'oauth2_provider',
+    'social_django',
+    'drf_social_oauth2',
     
     # Local apps
-    'accounts',
+    'user',
     'main',
+    'wallet',
 
     # External apps
     'location_field.apps.DefaultConfig',
     'drf_yasg',
     'corsheaders',
+    'coreapi',
+    'anymail',
 ]
+
+AUTH_USER_MODEL = 'user.Account'
+
+# Email
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # For development
+EMAIL_BACKEND = 'anymail.backends.brevo.EmailBackend'
+EMAIL_HOST = config('EMAIL_HOST')
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD') 
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
+BREVO_API_KEY = config('BREVO_API_KEY')
+
+ANYMAIL = {
+    "BREVO_API_KEY": config('BREVO_API_KEY')
+}
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
+        # 'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
+        # 'rest_framework.permissions.AllowAny',
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_RENDERER_CLASSES': [
+      'rest_framework.renderers.JSONRenderer',  
+    ]
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
-# Middleware
+
+CELERY_BROKER_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', #whitenoise
+    'whitenoise.middleware.WhiteNoiseMiddleware', 
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware', #corsheaders
+    'corsheaders.middleware.CorsMiddleware', 
     'django.middleware.common.CommonMiddleware',
+    'django.middleware.locale.LocaleMiddleware', 
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    "allauth.account.middleware.AccountMiddleware", #allauth
+    "allauth.account.middleware.AccountMiddleware", 
 ]
+
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'APP': {
+            'client_id': config('client_id'),
+            'secret': config('secert'),
+            'key': ''
+        }
+    }
+}
+
 
 # Root URL
 ROOT_URLCONF = 'core.urls'
@@ -101,14 +142,12 @@ ROOT_URLCONF = 'core.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],  # Global templates
-        # 'DIRS': [BASE_DIR / 'templates'],  # Global templates
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
-                # Default processors
                 'django.template.context_processors.debug',
-                'django.template.context_processors.request',  # Required by allauth
+                'django.template.context_processors.request', 
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
@@ -122,10 +161,12 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',  # Change to PostgreSQL or others in production
+        'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+DATABASES['default'] = dj_database_url.parse(config('External_Database_URL'))
 
 # Password Validators
 AUTH_PASSWORD_VALIDATORS = [
@@ -158,9 +199,12 @@ LOCATION_FIELD = {
     'provider.mapbox.id': 'mapbox.streets',
 }
 
+
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",  # Use Redis in production
-        "LOCATION": "unique-snowflake",
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": config('REDIS_LOCATION'),
     }
 }
+
+

@@ -1,8 +1,8 @@
 from .base import *
 
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+# ALLOWED_HOSTS = config('ALLOWED_HOSTS').split(',')
 
 CORS_ALLOW_ALL_ORIGINS = True
 
@@ -12,4 +12,16 @@ CORS_ALLOWED_ORIGINS = [
 
 
 # Other optional configurations:
-# CORS_ALLOW_CREDENTIALS = True
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
