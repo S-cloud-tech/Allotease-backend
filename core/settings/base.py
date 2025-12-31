@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
+    'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
@@ -44,8 +45,8 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
     'oauth2_provider',
-    'social_django',
-    'drf_social_oauth2',
+    'dj_rest_auth',
+    
     
     # Local apps
     'user',
@@ -80,18 +81,22 @@ ANYMAIL = {
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         # 'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.BasicAuthentication',
+        # 'rest_framework.authentication.BasicAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.TokenAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        # 'rest_framework.permissions.AllowAny',
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',
+        # 'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
     'DEFAULT_RENDERER_CLASSES': [
       'rest_framework.renderers.JSONRenderer',  
     ]
 }
+
+REST_USE_JWT = True
+JWT_AUTH_COOKIE = "allotease-auth"
+JWT_AUTH_REFRESH_COOKIE = "allotease-refresh-token"
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
@@ -123,14 +128,22 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware", 
 ]
 
-
+SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
         'APP': {
-            'client_id': config('client_id'),
-            'secret': config('secert'),
+            'client_id': config('CLIENT_ID'),
+            'secret': config('CLIENT_SECERT'),
             'key': ''
-        }
+        },
+        'AUTH_PARAMS': {
+            'access_type': 'offline',
+        },
+        'OAUTH_PKCE_ENABLED': True,
     }
 }
 
@@ -166,7 +179,7 @@ DATABASES = {
     }
 }
 
-DATABASES['default'] = dj_database_url.parse(config('External_Database_URL'))
+# DATABASES['default'] = dj_database_url.parse(config('External_Database_URL'))
 
 # Password Validators
 AUTH_PASSWORD_VALIDATORS = [
